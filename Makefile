@@ -8,5 +8,4 @@ run:
 unit-test:
 	go test -count=5 -short ./...
 
-ci:
-	unit-test
+ci: unit-test
