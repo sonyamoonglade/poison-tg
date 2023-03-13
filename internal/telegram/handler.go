@@ -6,19 +6,32 @@ import (
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type handler struct {
-	b *Bot
+type ButtonProvider interface {
+	Menu()
 }
 
-func NewHandler(bot *Bot) RouteHandler {
+type handler struct {
+	b               *Bot
+	templateManager *TemplateManager
+	buttonProvider  ButtonProvider
+}
+
+func NewHandler(bot *Bot, templateManager *TemplateManager, buttonProvider ButtonProvider) RouteHandler {
 	return &handler{
-		b: bot,
+		b:               bot,
+		templateManager: templateManager,
+		buttonProvider:  buttonProvider,
 	}
 }
 
 func (h *handler) Menu(ctx context.Context, m *tg.Message) error {
-	_, err := h.b.Send(tg.NewMessage(m.Chat.ID, "hello mate!"))
-	return err
+	var (
+		msg     = h.templateManager.Menu()
+		buttons = h.buttonProvider.Menu()
+		chatID  = m.Chat.ID
+	)
+
+	h.b.Send()
 }
 
 func (h *handler) HandleError(ctx context.Context, err error, m tg.Update) {

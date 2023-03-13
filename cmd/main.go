@@ -1,15 +1,13 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
-	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/sonyamoonglade/poison-tg/config"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram"
-	"github.com/sonyamoonglade/poison-tg/pkg/database"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
 )
 
@@ -31,18 +29,22 @@ func run() error {
 		return fmt.Errorf("error instantiating logger: %w", err)
 	}
 
+	if err := loadEnvs(); err != nil {
+		logger.Get().Sugar().Warn(err)
+	}
+
 	cfg, err := config.ReadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("can't read config: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	// defer cancel()
 
-	mongo, err := database.Connect(ctx, cfg.Database.URI, cfg.Database.Name)
-	if err != nil {
-		return fmt.Errorf("error connecting to mongo: %w", err)
-	}
+	// mongo, err := database.Connect(ctx, cfg.Database.URI, cfg.Database.Name)
+	// if err != nil {
+	// 	return fmt.Errorf("error connecting to mongo: %w", err)
+	// }
 
 	bot, err := telegram.NewBot(telegram.Config{
 		Token: cfg.Bot.Token,
@@ -54,7 +56,7 @@ func run() error {
 	handler := telegram.NewHandler(bot)
 	router := telegram.NewRouter(bot.GetUpdates(), handler, cfg.Bot.HandlerTimeout)
 
-	_ = mongo
+	// _ = mongo
 
 	router.Bootstrap()
 	return nil
@@ -75,4 +77,11 @@ func readCmdArgs() (string, string, bool, bool) {
 
 	// Naked return, see return variable names
 	return *configPath, *logsPath, *production, *strict
+}
+
+func loadEnvs() error {
+	if err := godotenv.Load(".env"); err != nil {
+		return fmt.Errorf("can't load environment variables from .env: %w", err)
+	}
+	return nil
 }

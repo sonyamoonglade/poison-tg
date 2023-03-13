@@ -45,7 +45,7 @@ func ReadConfig(path string) (AppConfig, error) {
 		return AppConfig{}, fmt.Errorf("missing MONGO_URI env")
 	}
 
-	botToken := os.Getenv("BOT_TOKEn")
+	botToken := os.Getenv("BOT_TOKEN")
 	if botToken == "" {
 		return AppConfig{}, fmt.Errorf("missing BOT_TOKEN env")
 	}
