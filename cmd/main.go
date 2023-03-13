@@ -53,7 +53,14 @@ func run() error {
 		return fmt.Errorf("error creating telegram bot: %w", err)
 	}
 
-	handler := telegram.NewHandler(bot)
+	templateManager, err := telegram.LoadTemplates("templates.json")
+	if err != nil {
+		return fmt.Errorf("can't load templates: %w", err)
+	}
+
+	buttonManager := telegram.NewButtonManager()
+
+	handler := telegram.NewHandler(bot, templateManager, buttonManager)
 	router := telegram.NewRouter(bot.GetUpdates(), handler, cfg.Bot.HandlerTimeout)
 
 	// _ = mongo

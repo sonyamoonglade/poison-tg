@@ -3,6 +3,8 @@ package telegram
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -17,8 +19,12 @@ var (
 )
 
 type RouteHandler interface {
-	Menu(ctx context.Context, m *tg.Message) error
+	Menu(ctx context.Context, chatID int64) error
+	Catalog(ctx context.Context, chatID int64) error
+	GetBucket(ctx context.Context, chatID int64) error
+	MakeOrder(ctx context.Context, chatID int64) error
 	HandleError(ctx context.Context, err error, m tg.Update)
+	AnswerCallback(callbackID string) error
 }
 
 type Router struct {
@@ -59,10 +65,11 @@ func (r *Router) Bootstrap() {
 			r.wg.Add(1)
 			go func() {
 				if err := r.mapToHandler(ctx, update); err != nil {
-					r.h.HandleError(ctx, err, update)
 					logger.Get().Error("error in handler occurred",
 						zap.String("from", update.FromChat().UserName),
-						zap.Int64("userID", update.FromChat().ID))
+						zap.Int64("userID", update.FromChat().ID),
+						zap.Error(err))
+					r.h.HandleError(ctx, err, update)
 				}
 				defer cancel()
 				defer r.wg.Done()
@@ -80,6 +87,8 @@ func (r *Router) mapToHandler(ctx context.Context, u tg.Update) error {
 	switch {
 	case u.Message != nil:
 		return r.mapToMessageHandler(ctx, u.Message)
+	case u.CallbackQuery != nil:
+		return r.mapToCallbackHandler(ctx, u.CallbackQuery)
 	default:
 		return ErrInvalidUpdate
 	}
@@ -91,7 +100,32 @@ func (r *Router) mapToMessageHandler(ctx context.Context, m *tg.Message) error {
 		zap.Time("date", m.Time()))
 	switch m.Text {
 	case "/menu":
-		return r.h.Menu(ctx, m)
+		return r.h.Menu(ctx, m.Chat.ID)
+	default:
+		return ErrNoHandler
+	}
+}
+
+func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) error {
+
+	defer logger.Get().Debug("callback info",
+		zap.String("data", c.Data),
+		zap.Time("date", c.Message.Time()))
+	defer r.h.AnswerCallback(c.ID)
+
+	intCallbackData, err := strconv.Atoi(c.Data)
+	if err != nil {
+		return fmt.Errorf("strconv.Atoi: %w", err)
+	}
+	switch intCallbackData {
+	case makeOrderCallback:
+		return r.h.MakeOrder(ctx, c.From.ID)
+	case getBucketCallback:
+		return r.h.GetBucket(ctx, c.From.ID)
+	case trackOrderCallback:
+		return nil
+	case catalogCallback:
+		return r.h.Catalog(ctx, c.From.ID)
 	default:
 		return ErrNoHandler
 	}

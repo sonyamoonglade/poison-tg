@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoad(t *testing.T) {
+func TestLoadTemplates(t *testing.T) {
 	t.Run("should load all values", func(t *testing.T) {
 		mt, st := "menu_template", "start_template"
 		content := fmt.Sprintf(`{"menu":"%s", "start":"%s"}`, mt, st)
@@ -16,7 +16,7 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 		tmpFile.Write([]byte(content))
 
-		templateManager, err := Load(tmpFile.Name())
+		templateManager, err := LoadTemplates(tmpFile.Name())
 		require.NoError(t, err)
 
 		require.Equal(t, templateManager.Menu(), mt)
@@ -32,7 +32,7 @@ func TestLoad(t *testing.T) {
 		require.NoError(t, err)
 		tmpFile.Write([]byte(content))
 
-		templateManager, err := Load(tmpFile.Name())
+		templateManager, err := LoadTemplates(tmpFile.Name())
 		require.Error(t, err)
 		require.Equal(t, "missing START template", err.Error())
 		require.Nil(t, templateManager)
