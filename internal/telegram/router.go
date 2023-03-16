@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
+	"github.com/sonyamoonglade/poison-tg/pkg/utils/numeric"
 	"go.uber.org/zap"
 )
 
@@ -18,11 +20,12 @@ var (
 )
 
 type RouteHandler interface {
+	Start(ctx context.Context, chatID int64) error
 	Menu(ctx context.Context, chatID int64) error
 	Catalog(ctx context.Context, chatID int64) error
 	GetBucket(ctx context.Context, chatID int64) error
 	// StartMakeOrderGuide is initial guide handler
-	StartMakeOrderGuide(ctx context.Context, chatID int64) error
+	StartMakeOrderGuide(ctx context.Context, m *tg.Message) error
 	// MakeOrderGuideStep1
 	// Can go to step 1 handler only from going backwards from step 2
 	MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
@@ -30,6 +33,8 @@ type RouteHandler interface {
 	MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
 	MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgID ...int64) error
 	MakeOrder(ctx context.Context, m *tg.Message) error
+	HandleSizeInput(ctx context.Context, m *tg.Message) error
+	HandlePriceInput(ctx context.Context, m *tg.Message) error
 	HandleError(ctx context.Context, err error, m tg.Update)
 	AnswerCallback(callbackID string) error
 }
@@ -98,12 +103,24 @@ func (r *Router) mapToHandler(ctx context.Context, u tg.Update) error {
 }
 
 func (r *Router) mapToMessageHandler(ctx context.Context, m *tg.Message) error {
+	var (
+		chatID = m.Chat.ID
+		cmd    = m.Text
+	)
+
 	logger.Get().Debug("message info",
 		zap.String("text", m.Text),
 		zap.Time("date", m.Time()))
-	switch m.Text {
-	case "/menu":
-		return r.h.Menu(ctx, m.Chat.ID)
+
+	switch true {
+	case r.command(cmd, "/start"):
+		return r.h.Start(ctx, chatID)
+	case r.command(cmd, "/menu"):
+		return r.h.Menu(ctx, chatID)
+	case r.isSizeReply(cmd):
+		return r.h.HandleSizeInput(ctx, m)
+	case r.isPriceReply(cmd):
+		return r.h.HandlePriceInput(ctx, m)
 	default:
 		return ErrNoHandler
 	}
@@ -131,7 +148,7 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 
 	switch intCallbackData {
 	case menuMakeOrderCallback:
-		return r.h.StartMakeOrderGuide(ctx, chatID)
+		return r.h.StartMakeOrderGuide(ctx, c.Message)
 	case orderGuideStep1Callback:
 		return r.h.MakeOrderGuideStep1(ctx, chatID, msgID, callbackDataMsgIDs...)
 	case orderGuideStep2Callback:
@@ -151,4 +168,30 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 	default:
 		return ErrNoHandler
 	}
+}
+
+func (r *Router) isSizeReply(text string) bool {
+	if text == "#" {
+		return true
+	}
+	if strings.HasPrefix(text, "http") || strings.HasPrefix(text, "https") {
+		return false
+	}
+	for _, r := range "0123456789" {
+		if strings.ContainsRune(text, r) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Router) isPriceReply(text string) bool {
+	if strings.HasPrefix(text, "http") || strings.HasPrefix(text, "https") {
+		return false
+	}
+	return numeric.AllAreDigits(text)
+}
+
+func (r *Router) command(actual, want string) bool {
+	return actual == want
 }

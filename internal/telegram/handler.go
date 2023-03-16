@@ -8,11 +8,10 @@ import (
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/services"
 	"github.com/sonyamoonglade/poison-tg/pkg/functools"
-	"github.com/sonyamoonglade/poison-tg/pkg/logger"
 )
 
-const (
-	groupSendErrMsg = "json: cannot unmarshal array into Go value of type tgbotapi.Message"
+var (
+	ErrInvalidState = errors.New("invalid state")
 )
 
 type handler struct {
@@ -27,28 +26,12 @@ func NewHandler(bot *Bot, customerService services.Customer) RouteHandler {
 	}
 }
 
-func (h *handler) MakeOrder(ctx context.Context, m *tg.Message) error {
-	var (
-		telegramID = m.Chat.ID
-		firstName  = m.Chat.FirstName
-		lastName   = m.Chat.LastName
-		username   = domain.MakeUsername(firstName, lastName, m.Chat.UserName)
-	)
+func (h *handler) Start(ctx context.Context, chatID int64) error {
+	return h.cleanSend(tg.NewMessage(chatID, GetTemplate().Start))
+}
 
-	_, err := h.customerService.GetByTelegramID(ctx, telegramID)
-	// if no such customer yet create it
-	if err != nil && errors.Is(err, domain.ErrCustomerNotFound) {
-		if err := h.customerService.Save(ctx, domain.NewCustomer(telegramID, username)); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-	// if customer exists then update it's state to waiting for screenshot
-	if err := h.customerService.UpdateState(ctx, telegramID, domain.StateWaitingForLink); err != nil {
-		return err
-	}
-	return h.cleanSend(tg.NewMessage(m.Chat.ID, "Pojalusta, otpravte image of your products"))
+func (h *handler) MakeOrder(ctx context.Context, m *tg.Message) error {
+	panic("implement me")
 }
 
 func (h *handler) Menu(ctx context.Context, chatID int64) error {
@@ -63,8 +46,14 @@ func (h *handler) GetBucket(ctx context.Context, chatID int64) error {
 	return h.cleanSend(tg.NewMessage(chatID, "get bucket"))
 }
 
-func (h *handler) StartMakeOrderGuide(ctx context.Context, chatID int64) error {
-	logger.Get().Sugar().Debugf("start make order guide")
+func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error {
+	var (
+		chatID     = m.Chat.ID
+		telegramID = chatID
+		firstName  = m.Chat.FirstName
+		lastName   = m.Chat.LastName
+		username   = domain.MakeUsername(firstName, lastName, m.Chat.UserName)
+	)
 	url := "https://picsum.photos/300/300"
 	image := tg.NewInputMediaPhoto(tg.FileURL(url))
 	image.Caption = "У меня есть желание привезти лишь то,что нужно, поэтому, (имя юзера), предупреждаю, китайцы уже позаботились о нас и предоставили к каждому размерному товару - размерную сетку разных стран, тебе лишь нужно выбрать подходящий размер. Не ошибись с выбором, Стрелок  🤠 Поехали?"
@@ -76,12 +65,17 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, chatID int64) error {
 	if err != nil {
 		return err
 	}
+
 	msgIDs := functools.Map(func(m tg.Message) int64 {
 		return int64(m.MessageID)
 	}, sentMsgs)
 
 	buttons := prepareOrderGuideButtons(orderGuideStep1Callback, msgIDs...)
-	return h.sendWithKeyboard(chatID, "Кнопки для пролистывания инструкции", buttons)
+	if err := h.sendWithKeyboard(chatID, "Кнопки для пролистывания инструкции", buttons); err != nil {
+		return err
+	}
+
+	return h.sendWaitForSizeCommandAndUpdateCustomerState(ctx, telegramID, username)
 }
 
 func (h *handler) MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
@@ -184,12 +178,62 @@ func (h *handler) MakeOrderGuideStep4(ctx context.Context, chatID int64, control
 	return h.cleanSend(buttons)
 }
 
+func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
+	var (
+		chatID = m.Chat.ID
+	)
+	// validate state
+	if err := h.checkRequiredState(ctx, domain.StateWaitingForSize, chatID); err != nil {
+		return err
+	}
+
+	//TODO implement me
+	panic("implement me")
+}
+
+func (h *handler) HandlePriceInput(ctx context.Context, m *tg.Message) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (h *handler) AnswerCallback(callbackID string) error {
 	return h.cleanSend(tg.NewCallback(callbackID, ""))
 }
 
 func (h *handler) HandleError(ctx context.Context, err error, m tg.Update) {
 	h.b.Send(tg.NewMessage(m.FromChat().ID, "Whoops!"))
+}
+
+func (h *handler) checkRequiredState(ctx context.Context, want domain.State, telegramID int64) error {
+	customer, err := h.customerService.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+	if customer.TgState != want {
+		return ErrInvalidState
+	}
+	return nil
+}
+
+func (h *handler) sendWaitForSizeCommandAndUpdateCustomerState(ctx context.Context, telegramID int64, username string) error {
+	chatID := telegramID
+	_, err := h.customerService.GetByTelegramID(ctx, telegramID)
+	// if no such customer yet then create it
+	if err != nil && errors.Is(err, domain.ErrCustomerNotFound) {
+		// save to db
+		if err := h.customerService.Save(ctx, domain.NewCustomer(telegramID, username)); err != nil {
+			return err
+		}
+	} else if err != nil {
+		// report internal error
+		return err
+	}
+
+	initialMakeOrderCommand := tg.NewMessage(chatID, "Отправьте размер выбранного вами товара (шаг 1) 👍")
+	if err := h.cleanSend(initialMakeOrderCommand); err != nil {
+		return err
+	}
+	return h.customerService.UpdateState(ctx, chatID, domain.StateWaitingForSize)
 }
 
 func (h *handler) sendWithKeyboard(chatID int64, text string, keyboard interface{}) error {
