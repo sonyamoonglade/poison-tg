@@ -7,7 +7,10 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/sonyamoonglade/poison-tg/config"
+	"github.com/sonyamoonglade/poison-tg/internal/domain"
+	"github.com/sonyamoonglade/poison-tg/internal/services"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram"
+	"github.com/sonyamoonglade/poison-tg/pkg/database"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
 )
 
@@ -45,7 +48,7 @@ func run() error {
 	// if err != nil {
 	// 	return fmt.Errorf("error connecting to mongo: %w", err)
 	// }
-
+	customerRepo := database.NewInMemoryRepo[domain.Customer]()
 	bot, err := telegram.NewBot(telegram.Config{
 		Token: cfg.Bot.Token,
 	})
@@ -53,14 +56,12 @@ func run() error {
 		return fmt.Errorf("error creating telegram bot: %w", err)
 	}
 
-	templateManager, err := telegram.LoadTemplates("templates.json")
-	if err != nil {
+	if err := telegram.LoadTemplates("templates.json"); err != nil {
 		return fmt.Errorf("can't load templates: %w", err)
 	}
 
-	buttonManager := telegram.NewButtonManager()
-
-	handler := telegram.NewHandler(bot, templateManager, buttonManager)
+	customerService := services.NewCustomerService(customerRepo)
+	handler := telegram.NewHandler(bot, customerService)
 	router := telegram.NewRouter(bot.GetUpdates(), handler, cfg.Bot.HandlerTimeout)
 
 	// _ = mongo

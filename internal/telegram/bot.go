@@ -1,6 +1,8 @@
 package telegram
 
-import tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+import (
+	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
 
 type Config struct {
 	Token string
@@ -26,6 +28,12 @@ func (b *Bot) GetUpdates() tg.UpdatesChannel {
 
 func (b *Bot) Send(c tg.Chattable) (tg.Message, error) {
 	return b.client.Send(c)
+}
+
+func (b *Bot) Edit(chatID int64, prevMessageID int, newText string, newKeyboard *tg.InlineKeyboardMarkup) (tg.Message, error) {
+	msg := tg.NewEditMessageText(chatID, prevMessageID, newText)
+	msg.ReplyMarkup = newKeyboard
+	return b.Send(msg)
 }
 
 func (b *Bot) Shutdown() {

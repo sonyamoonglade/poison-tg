@@ -22,7 +22,11 @@ type RouteHandler interface {
 	Menu(ctx context.Context, chatID int64) error
 	Catalog(ctx context.Context, chatID int64) error
 	GetBucket(ctx context.Context, chatID int64) error
-	MakeOrder(ctx context.Context, chatID int64) error
+	StartMakeOrderGuide(ctx context.Context, chatID int64) error
+	MakeOrderGuideStep2(ctx context.Context, m *tg.Message) error
+	MakeOrderGuideStep3(ctx context.Context, m *tg.Message) error
+	MakeOrderGuideStep4(ctx context.Context, m *tg.Message) error
+	MakeOrder(ctx context.Context, m *tg.Message) error
 	HandleError(ctx context.Context, err error, m tg.Update)
 	AnswerCallback(callbackID string) error
 }
@@ -56,10 +60,6 @@ func (r *Router) Bootstrap() {
 			if !ok {
 				return
 			}
-
-			logger.Get().Debug("new update",
-				zap.String("from", update.FromChat().UserName),
-				zap.Int64("userID", update.FromChat().ID))
 
 			ctx, cancel := context.WithTimeout(context.Background(), r.handlerTimeout)
 			r.wg.Add(1)
@@ -118,13 +118,21 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return fmt.Errorf("strconv.Atoi: %w", err)
 	}
 	switch intCallbackData {
+	case menuMakeOrderCallback:
+		return r.h.StartMakeOrderGuide(ctx, c.From.ID)
+	case orderGuideStep2Callback:
+		return r.h.MakeOrderGuideStep2(ctx, c.Message)
+	case orderGuideStep3Callback:
+		return r.h.MakeOrderGuideStep3(ctx, c.Message)
+	case orderGuideStep4Callback:
+		return r.h.MakeOrderGuideStep4(ctx, c.Message)
 	case makeOrderCallback:
-		return r.h.MakeOrder(ctx, c.From.ID)
-	case getBucketCallback:
+		return r.h.MakeOrder(ctx, c.Message)
+	case menuGetBucketCallback:
 		return r.h.GetBucket(ctx, c.From.ID)
-	case trackOrderCallback:
+	case menuTrackOrderCallback:
 		return nil
-	case catalogCallback:
+	case menuCatalogCallback:
 		return r.h.Catalog(ctx, c.From.ID)
 	default:
 		return ErrNoHandler

@@ -16,11 +16,11 @@ func TestLoadTemplates(t *testing.T) {
 		require.NoError(t, err)
 		tmpFile.Write([]byte(content))
 
-		templateManager, err := LoadTemplates(tmpFile.Name())
+		err = LoadTemplates(tmpFile.Name())
 		require.NoError(t, err)
 
-		require.Equal(t, templateManager.Menu(), mt)
-		require.Equal(t, templateManager.Start(), st)
+		require.Equal(t, GetTemplate().Menu, mt)
+		require.Equal(t, GetTemplate().Start, st)
 
 		defer os.Remove(tmpFile.Name())
 	})
@@ -32,10 +32,9 @@ func TestLoadTemplates(t *testing.T) {
 		require.NoError(t, err)
 		tmpFile.Write([]byte(content))
 
-		templateManager, err := LoadTemplates(tmpFile.Name())
+		err = LoadTemplates(tmpFile.Name())
 		require.Error(t, err)
 		require.Equal(t, "missing START template", err.Error())
-		require.Nil(t, templateManager)
 		defer os.Remove(tmpFile.Name())
 	})
 }

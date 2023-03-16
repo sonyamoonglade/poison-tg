@@ -7,44 +7,38 @@ import (
 	"os"
 )
 
+var (
+	t *templates = new(templates)
+)
+
 type templates struct {
 	Menu  string `json:"menu,omitempty"`
 	Start string `json:"start,omitempty"`
 }
 
-type TemplateManager struct {
-	t templates
-}
-
-func LoadTemplates(path string) (*TemplateManager, error) {
-
+func LoadTemplates(path string) error {
 	var templates templates
 
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("can't read file %s: %w", path, err)
+		return fmt.Errorf("can't read file %s: %w", path, err)
 	}
 
 	if err := json.NewDecoder(bytes.NewReader(content)).Decode(&templates); err != nil {
-		return nil, fmt.Errorf("can't decode file content: %w", err)
+		return fmt.Errorf("can't decode file content: %w", err)
 	}
 
 	if templates.Menu == "" {
-		return nil, fmt.Errorf("missing MENU template")
+		return fmt.Errorf("missing MENU template")
 	}
 	if templates.Start == "" {
-		return nil, fmt.Errorf("missing START template")
+		return fmt.Errorf("missing START template")
 	}
 
-	return &TemplateManager{
-		t: templates,
-	}, nil
+	*t = templates
+	return nil
 }
 
-func (tm *TemplateManager) Menu() string {
-	return tm.t.Menu
-}
-
-func (tm *TemplateManager) Start() string {
-	return tm.t.Start
+func GetTemplate() *templates {
+	return t
 }
