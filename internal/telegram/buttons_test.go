@@ -1,28 +1,29 @@
 package telegram
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestInjectExtractMsgID(t *testing.T) {
+	t.Parallel()
 	type testcase struct {
-		msgID    int64
+		msgIDs   []int64
 		callback int
 	}
 	var testcases []testcase
-	for i := 0; i < 1000; i++ {
-		testcases = append(testcases, testcase{msgID: int64(i), callback: i})
+	for i := int64(-math.MaxInt16); i < math.MaxInt16; i++ {
+		testcases = append(testcases, testcase{msgIDs: []int64{i, i + 1, i + 2}, callback: int(math.MaxInt16 - i)})
 	}
 
 	for _, tc := range testcases {
-		data := injectMessageID(tc.msgID, tc.callback)
+		data := injectMessageIDs(tc.callback, tc.msgIDs...)
 		require.NotZero(t, data)
-
-		msgID, callback, err := ExtractMsgID(data)
+		gotMsgIDs, callback, err := parseCallbackData(data)
 		require.NoError(t, err)
-		require.Equal(t, tc.msgID, msgID)
+		require.EqualValues(t, tc.msgIDs, gotMsgIDs)
 		require.Equal(t, tc.callback, callback)
 	}
 }

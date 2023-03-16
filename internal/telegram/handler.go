@@ -3,11 +3,11 @@ package telegram
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/services"
+	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
 )
 
@@ -29,10 +29,10 @@ func NewHandler(bot *Bot, customerService services.Customer) RouteHandler {
 
 func (h *handler) MakeOrder(ctx context.Context, m *tg.Message) error {
 	var (
-		telegramID int64  = m.Chat.ID
-		firstName  string = m.Chat.FirstName
-		lastName   string = m.Chat.LastName
-		username   string = domain.MakeUsername(firstName, lastName, m.Chat.UserName)
+		telegramID = m.Chat.ID
+		firstName  = m.Chat.FirstName
+		lastName   = m.Chat.LastName
+		username   = domain.MakeUsername(firstName, lastName, m.Chat.UserName)
 	)
 
 	_, err := h.customerService.GetByTelegramID(ctx, telegramID)
@@ -65,43 +65,123 @@ func (h *handler) GetBucket(ctx context.Context, chatID int64) error {
 
 func (h *handler) StartMakeOrderGuide(ctx context.Context, chatID int64) error {
 	logger.Get().Sugar().Debugf("start make order guide")
-	url := "https://picsum.photos/200/300"
-	imageWithCaption := tg.NewPhoto(chatID, tg.FileURL(url))
-	imageWithCaption.Caption = "Vadim's message blabla\nblabla\nbla\nListay dalee dlya instrukcii!"
-	if err := h.cleanSend(imageWithCaption); err != nil {
+	url := "https://picsum.photos/300/300"
+	image := tg.NewInputMediaPhoto(tg.FileURL(url))
+	image.Caption = "У меня есть желание привезти лишь то,что нужно, поэтому, (имя юзера), предупреждаю, китайцы уже позаботились о нас и предоставили к каждому размерному товару - размерную сетку разных стран, тебе лишь нужно выбрать подходящий размер. Не ошибись с выбором, Стрелок  🤠 Поехали?"
+	group := tg.NewMediaGroup(chatID, []interface{}{
+		image,
+		tg.NewInputMediaPhoto(tg.FileURL(url)),
+	})
+	sentMsgs, err := h.b.client.SendMediaGroup(group)
+	if err != nil {
 		return err
 	}
-	return h.sendWithKeyboard(chatID, "Knopku dlya upravlienia", orderGuideStep1Buttons)
+	msgIDs := functools.Map(func(m tg.Message) int64 {
+		return int64(m.MessageID)
+	}, sentMsgs)
+
+	buttons := prepareOrderGuideButtons(orderGuideStep1Callback, msgIDs...)
+	return h.sendWithKeyboard(chatID, "Кнопки для пролистывания инструкции", buttons)
 }
 
-func (h *handler) MakeOrderGuideStep2(ctx context.Context, m *tg.Message) error {
-	logger.Get().Sugar().Debugf("guide step 2")
-	url := "https://picsum.photos/200/200"
-	imageWithCaption := tg.NewInputMediaPhoto(tg.FileURL(url))
-	imageWithCaption.Caption = "This is step 2 of instruction"
-	editMsg := &tg.EditMessageMediaConfig{
-		BaseEdit: tg.BaseEdit{
-			ChatID:      m.Chat.ID,
-			MessageID:   m.MessageID,
-			ReplyMarkup: &orderGuideStep2Buttons,
-		},
-		Media: imageWithCaption,
+func (h *handler) MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
+	// update content
+	for i, imID := range instructionMsgIDs {
+		url := "https://picsum.photos/300/301"
+		image := tg.NewInputMediaPhoto(tg.FileURL(url))
+		// update Caption only on first element on order to show text (see telegram docs)
+		if i == 0 {
+			image.Caption = "У меня есть желание привезти лишь то,что нужно, поэтому, (имя юзера), предупреждаю, китайцы уже позаботились о нас и предоставили к каждому размерному товару - размерную сетку разных стран, тебе лишь нужно выбрать подходящий размер. Не ошибись с выбором, Стрелок  🤠 Поехали?"
+		}
+		editOneMedia := &tg.EditMessageMediaConfig{
+			BaseEdit: tg.BaseEdit{
+				ChatID:    chatID,
+				MessageID: int(imID),
+			},
+			Media: image,
+		}
+		if err := h.cleanSend(editOneMedia); err != nil {
+			return err
+		}
 	}
-	if err := h.cleanSend(editMsg); err != nil {
-		return fmt.Errorf("step2 err: %w", err)
-	}
-	return nil
+	// update control buttons
+	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep1Callback, instructionMsgIDs...))
+	return h.cleanSend(buttons)
 }
 
-func (h *handler) MakeOrderGuideStep3(ctx context.Context, m *tg.Message) error {
-	logger.Get().Sugar().Debugf("guide step 3")
-	url := "https://picsum.photos/200/300"
-	return h.sendImageWithTextAndKeyboard(m.Chat.ID, url, "step 3", orderGuideStep3Buttons)
+func (h *handler) MakeOrderGuideStep2(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
+	// update content
+	for i, imID := range instructionMsgIDs {
+		url := "https://picsum.photos/300/302"
+		image := tg.NewInputMediaPhoto(tg.FileURL(url))
+		// update Caption only on first element on order to show text (see telegram docs)
+		if i == 0 {
+			image.Caption = "This is step 2 of instruction"
+		}
+		editOneMedia := &tg.EditMessageMediaConfig{
+			BaseEdit: tg.BaseEdit{
+				ChatID:    chatID,
+				MessageID: int(imID),
+			},
+			Media: image,
+		}
+		if err := h.cleanSend(editOneMedia); err != nil {
+			return err
+		}
+	}
+	// update control buttons
+	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep2Callback, instructionMsgIDs...))
+	return h.cleanSend(buttons)
 }
-func (h *handler) MakeOrderGuideStep4(ctx context.Context, m *tg.Message) error {
-	logger.Get().Sugar().Debugf("guide step 4")
-	url := "https://picsum.photos/200/300"
-	return h.sendImageWithTextAndKeyboard(m.Chat.ID, url, "step 4", orderGuideStep4Buttons)
+
+func (h *handler) MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
+	// update content
+	for i, imID := range instructionMsgIDs {
+		url := "https://picsum.photos/300/303"
+		image := tg.NewInputMediaPhoto(tg.FileURL(url))
+		// update Caption only on first element on order to show text (see telegram docs)
+		if i == 0 {
+			image.Caption = "This is step 3 of instruction"
+		}
+		editOneMedia := &tg.EditMessageMediaConfig{
+			BaseEdit: tg.BaseEdit{
+				ChatID:    chatID,
+				MessageID: int(imID),
+			},
+			Media: image,
+		}
+		if err := h.cleanSend(editOneMedia); err != nil {
+			return err
+		}
+	}
+	// update control buttons
+	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep3Callback, instructionMsgIDs...))
+	return h.cleanSend(buttons)
+}
+
+func (h *handler) MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
+	// update content
+	for i, imID := range instructionMsgIDs {
+		url := "https://picsum.photos/300/304"
+		image := tg.NewInputMediaPhoto(tg.FileURL(url))
+		// update Caption only on first element on order to show text (see telegram docs)
+		if i == 0 {
+			image.Caption = "This is step 4 of instruction"
+		}
+		editOneMedia := &tg.EditMessageMediaConfig{
+			BaseEdit: tg.BaseEdit{
+				ChatID:    chatID,
+				MessageID: int(imID),
+			},
+			Media: image,
+		}
+		if err := h.cleanSend(editOneMedia); err != nil {
+			return err
+		}
+	}
+	// update control buttons
+	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep4Callback, instructionMsgIDs...))
+	return h.cleanSend(buttons)
 }
 
 func (h *handler) AnswerCallback(callbackID string) error {
@@ -120,24 +200,5 @@ func (h *handler) sendWithKeyboard(chatID int64, text string, keyboard interface
 
 func (h *handler) cleanSend(c tg.Chattable) error {
 	_, err := h.b.Send(c)
-
 	return err
-}
-
-func (h *handler) cleanEdit(chatID int64, prevMsgID int, newText string, newKeyboard tg.InlineKeyboardMarkup) error {
-	_, err := h.b.Edit(chatID, prevMsgID, newText, &newKeyboard)
-	return err
-}
-
-func (h *handler) sendImageWithText(chatID int64, imageURL string, text string) error {
-	resp := tg.NewPhoto(chatID, tg.FileURL(imageURL))
-	resp.Caption = text
-	return h.cleanSend(resp)
-}
-
-func (h *handler) sendImageWithTextAndKeyboard(chatID int64, imageURL string, text string, keyboard tg.InlineKeyboardMarkup) error {
-	resp := tg.NewPhoto(chatID, tg.FileURL(imageURL))
-	resp.Caption = text
-	resp.ReplyMarkup = keyboard
-	return h.cleanSend(resp)
 }

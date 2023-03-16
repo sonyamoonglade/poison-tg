@@ -8,14 +8,15 @@ import (
 
 var (
 	// Default state not waiting for any make order response
-	StateDefault         State = State{v: 0}
-	StateWaitingForLink        = State{v: 1}
-	StateWaitingForSize        = State{v: 2}
-	StateWaitingForPrice       = State{v: 3}
+	StateDefault               = State{V: 0}
+	StateWaitingForSize        = State{V: 1}
+	StateWaitingForPrice       = State{V: 2}
+	StateWaitingForButtonColor = State{V: 3}
+	StateWaitingForLink        = State{V: 4}
 )
 
 var (
-	ErrCustomerNotFound = errors.New("cutomer not found")
+	ErrCustomerNotFound = errors.New("customer not found")
 )
 
 type Customer struct {
@@ -38,7 +39,7 @@ func (c *Customer) UpdateState(newState State) {
 	c.TgState = newState
 }
 func (c Customer) GetTgState() uint8 {
-	return c.TgState.v
+	return c.TgState.V
 }
 
 func MakeUsername(firstName string, lastName string, username string) string {
@@ -52,9 +53,9 @@ func MakeUsername(firstName string, lastName string, username string) string {
 }
 
 type State struct {
-	v uint8 `json:"v" bson:"v"`
+	V uint8 `json:"v" bson:"v"`
 }
 
 func (s State) Value() uint8 {
-	return s.v
+	return s.V
 }

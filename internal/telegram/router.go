@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -22,10 +21,14 @@ type RouteHandler interface {
 	Menu(ctx context.Context, chatID int64) error
 	Catalog(ctx context.Context, chatID int64) error
 	GetBucket(ctx context.Context, chatID int64) error
+	// StartMakeOrderGuide is initial guide handler
 	StartMakeOrderGuide(ctx context.Context, chatID int64) error
-	MakeOrderGuideStep2(ctx context.Context, m *tg.Message) error
-	MakeOrderGuideStep3(ctx context.Context, m *tg.Message) error
-	MakeOrderGuideStep4(ctx context.Context, m *tg.Message) error
+	// MakeOrderGuideStep1
+	// Can go to step 1 handler only from going backwards from step 2
+	MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
+	MakeOrderGuideStep2(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
+	MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
+	MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgID ...int64) error
 	MakeOrder(ctx context.Context, m *tg.Message) error
 	HandleError(ctx context.Context, err error, m tg.Update)
 	AnswerCallback(callbackID string) error
@@ -113,19 +116,30 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		zap.Time("date", c.Message.Time()))
 	defer r.h.AnswerCallback(c.ID)
 
-	intCallbackData, err := strconv.Atoi(c.Data)
+	var (
+		chatID             = c.Message.Chat.ID
+		msgID              = c.Message.MessageID
+		intCallbackData    int
+		callbackDataMsgIDs []int64
+	)
+	injectedMsgID, callback, err := parseCallbackData(c.Data)
 	if err != nil {
-		return fmt.Errorf("strconv.Atoi: %w", err)
+		return fmt.Errorf("parseCallbackData: %w", err)
 	}
+	intCallbackData = callback
+	callbackDataMsgIDs = injectedMsgID
+
 	switch intCallbackData {
 	case menuMakeOrderCallback:
-		return r.h.StartMakeOrderGuide(ctx, c.From.ID)
+		return r.h.StartMakeOrderGuide(ctx, chatID)
+	case orderGuideStep1Callback:
+		return r.h.MakeOrderGuideStep1(ctx, chatID, msgID, callbackDataMsgIDs...)
 	case orderGuideStep2Callback:
-		return r.h.MakeOrderGuideStep2(ctx, c.Message)
+		return r.h.MakeOrderGuideStep2(ctx, chatID, msgID, callbackDataMsgIDs...)
 	case orderGuideStep3Callback:
-		return r.h.MakeOrderGuideStep3(ctx, c.Message)
+		return r.h.MakeOrderGuideStep3(ctx, chatID, msgID, callbackDataMsgIDs...)
 	case orderGuideStep4Callback:
-		return r.h.MakeOrderGuideStep4(ctx, c.Message)
+		return r.h.MakeOrderGuideStep4(ctx, chatID, msgID, callbackDataMsgIDs...)
 	case makeOrderCallback:
 		return r.h.MakeOrder(ctx, c.Message)
 	case menuGetBucketCallback:

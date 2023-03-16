@@ -1,18 +1,26 @@
 package telegram
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strconv"
+	"strings"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 const (
+	arrLeft  = "⬅"
+	arrRight = "➡"
+)
+
+// DO NOT CHANGE ORDER
+// LOGIC DEMANDS ON IOTA
+// todo: change from iota
+const (
 	menuCatalogCallback = iota + 1
-	menuMakeOrderCallback
 	menuGetBucketCallback
 	menuTrackOrderCallback
+	menuMakeOrderCallback
 	orderGuideStep1Callback
 	orderGuideStep2Callback
 	orderGuideStep3Callback
@@ -21,61 +29,52 @@ const (
 )
 
 var (
-	menuButtons                  = menu()
-	orderGuideStep1Buttons       = orderGuideStep(orderGuideStep1Callback)
-	orderGuideStep2Buttons       = orderGuideStep(orderGuideStep2Callback)
-	orderGuideStep3Buttons       = orderGuideStep(orderGuideStep3Callback)
-	orderGuideStep4Buttons       = orderGuideStep(orderGuideStep4Callback)
-	orderGuideToMakeOrderButtons = orderGuideToMakeOrder()
+	menuButtons = menu()
 )
 
-// first 10 bits is msgID
-// next 10 bits is callback
-func injectMessageID(msgID int64, callback int) string {
-	payload := make([]byte, 64)
-	msgIdBuf := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutVarint(msgIdBuf, msgID)
-	msgIdBuf = msgIdBuf[:n]
-	cbBuf := make([]byte, binary.MaxVarintLen64)
-	n = binary.PutVarint(msgIdBuf, msgID)
-	cbBuf = cbBuf[:n]
-
-	return string(payload)
+func injectMessageIDs(callback int, msgIDs ...int64) string {
+	var msgIDstr string
+	for i, m := range msgIDs {
+		if i < len(msgIDs)-1 {
+			msgIDstr += strconv.Itoa(int(m)) + ","
+		} else {
+			msgIDstr += strconv.Itoa(int(m))
+		}
+	}
+	return msgIDstr + ":" + strconv.Itoa(callback)
 }
 
-func ExtractMsgID(data string) (msgID int64, callback int, err error) {
-	payload := []byte(data)
-	msgIDstr := payload[56:]
-	callbackStr := payload[:9]
-	fmt.Printf("before: %v %v\n", msgIDstr, callbackStr)
-	// find end of msgIDstr
-	for i, b := range msgIDstr {
-		if b == 0 {
-			msgIDstr = msgIDstr[:i]
-			break
+func parseCallbackData(data string) ([]int64, int, error) {
+	if !strings.ContainsRune(data, ':') {
+		callback, err := strconv.Atoi(data)
+		if err != nil {
+			return nil, 0, fmt.Errorf("strconv.Atoi: %w", err)
 		}
+		return nil, callback, nil
 	}
-	// find end of callback
-	for i, b := range callbackStr {
-		fmt.Printf("ite: %d %v %v\n", i, b, b == '0')
-		if b == 0 {
-			callbackStr = callbackStr[:i]
-			break
+	var (
+		msgIDstrs []string
+		msgIDints []int64
+	)
+
+	spl := strings.Split(data, ":")
+	msgIDstrs = strings.Split(spl[0], ",")
+	cbStr := spl[1]
+
+	for _, m := range msgIDstrs {
+		mInt, err := strconv.Atoi(m)
+		if err != nil {
+			return nil, 0, fmt.Errorf("strconv.Atoi msgID: %w", err)
 		}
-	}
-	fmt.Printf("recv: msg: %v cb: %v\n", msgIDstr, callbackStr)
-	fmt.Printf("recv: msg: %v cb: %v\n", string(msgIDstr), string(callbackStr))
-	msgIDint, err := strconv.ParseInt(string(msgIDstr), 2, 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("can't parse payload: %w", err)
+		msgIDints = append(msgIDints, int64(mInt))
 	}
 
-	callbackInt, err := strconv.ParseInt(string(callbackStr), 2, 32)
+	cbInt, err := strconv.Atoi(cbStr)
 	if err != nil {
-		return 0, 0, fmt.Errorf("can't parse payload: %w", err)
+		return nil, 0, fmt.Errorf("strconv.Atoi cb: %w", err)
 	}
-	fmt.Printf("out: %d %d\n", msgIDint, callbackInt)
-	return msgIDint, int(callbackInt), nil
+
+	return msgIDints, cbInt, nil
 }
 
 func menu() tg.InlineKeyboardMarkup {
@@ -96,25 +95,25 @@ func menu() tg.InlineKeyboardMarkup {
 	)
 }
 
-func orderGuideStep(step int) tg.InlineKeyboardMarkup {
+func prepareOrderGuideButtons(step int, msgIDs ...int64) tg.InlineKeyboardMarkup {
 	if step == orderGuideStep4Callback {
 		return tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
-				tg.NewInlineKeyboardButtonData("<-", strconv.Itoa(step-1)),
+				tg.NewInlineKeyboardButtonData(arrLeft, injectMessageIDs(step-1, msgIDs...)),
 			),
 		)
 	} else if step == orderGuideStep1Callback {
 		return tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
-				tg.NewInlineKeyboardButtonData("->", strconv.Itoa(step+1)),
+				tg.NewInlineKeyboardButtonData(arrRight, injectMessageIDs(step+1, msgIDs...)),
 			),
 		)
 	}
 
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("<-", strconv.Itoa(step-1)),
-			tg.NewInlineKeyboardButtonData("->", strconv.Itoa(step+1)),
+			tg.NewInlineKeyboardButtonData(arrLeft, injectMessageIDs(step-1, msgIDs...)),
+			tg.NewInlineKeyboardButtonData(arrRight, injectMessageIDs(step+1, msgIDs...)),
 		),
 	)
 }
