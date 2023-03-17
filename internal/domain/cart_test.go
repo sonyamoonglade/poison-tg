@@ -10,46 +10,46 @@ func TestRemove(t *testing.T) {
 
 	t.Run("remove at 0 idx", func(t *testing.T) {
 		cart := make(Cart, 0)
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
 
-		removeID := cart[0].ProductID
+		removeID := cart[0].PositionID
 
 		cart.Remove(removeID.Hex())
 
 		for _, item := range cart {
-			if item.ProductID == removeID {
-				t.Fatalf("product has not been removed: %s", item.ProductID.Hex())
+			if item.PositionID == removeID {
+				t.Fatalf("product has not been removed: %s", item.PositionID.Hex())
 			}
 		}
 	})
 
 	t.Run("remove at 1st idx", func(t *testing.T) {
 		cart := make(Cart, 0)
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
 
-		removeID := cart[1].ProductID
+		removeID := cart[1].PositionID
 
 		cart.Remove(removeID.Hex())
 
 		for _, item := range cart {
-			if item.ProductID == removeID {
-				t.Fatalf("product has not been removed: %s", item.ProductID.Hex())
+			if item.PositionID == removeID {
+				t.Fatalf("product has not been removed: %s", item.PositionID.Hex())
 			}
 		}
 
@@ -57,23 +57,23 @@ func TestRemove(t *testing.T) {
 
 	t.Run("remove at 2nd idx", func(t *testing.T) {
 		cart := make(Cart, 0)
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
-		cart.Add(Product{
-			ProductID: primitive.NewObjectID(),
+		cart.Add(Position{
+			PositionID: primitive.NewObjectID(),
 		})
 
-		removeID := cart[2].ProductID
+		removeID := cart[2].PositionID
 
 		cart.Remove(removeID.Hex())
 
 		for _, item := range cart {
-			if item.ProductID == removeID {
-				t.Fatalf("product has not been removed: %s", item.ProductID.Hex())
+			if item.PositionID == removeID {
+				t.Fatalf("product has not been removed: %s", item.PositionID.Hex())
 			}
 		}
 	})
