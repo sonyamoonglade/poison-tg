@@ -42,3 +42,5 @@ func (c *customerRepo) GetByTelegramID(ctx context.Context, telegramID int64) (d
 	}
 	return customer, nil
 }
+
+func (c *customerRepo) PrintDb() {}

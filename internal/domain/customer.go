@@ -16,15 +16,18 @@ var (
 )
 
 var (
-	ErrCustomerNotFound = errors.New("customer not found")
+	ErrCustomerNotFound          = errors.New("customer not found")
+	ErrLastPositionAlreadyExists = errors.New("last position already exists")
 )
 
 type Customer struct {
-	CustomerID  primitive.ObjectID `json:"customerId" json:"customerID,omitempty" bson:"customerId,omitempty"`
-	TelegramID  int64              `json:"telegramID" bson:"telegramID"`
-	Username    string             `json:"username" bson:"username"`
-	PhoneNumber *string            `json:"phoneNumber,omitempty" bson:"phoneNumber,omitempty"`
-	TgState     State              `json:"state" bson:"state"`
+	CustomerID       primitive.ObjectID `json:"customerId" json:"customerID,omitempty" bson:"customerId,omitempty"`
+	TelegramID       int64              `json:"telegramID" bson:"telegramID"`
+	Username         string             `json:"username" bson:"username"`
+	PhoneNumber      *string            `json:"phoneNumber,omitempty" bson:"phoneNumber,omitempty"`
+	TgState          State              `json:"state" bson:"state"`
+	Cart             Cart               `json:"cart" bson:"cart"`
+	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition,omitempty"`
 }
 
 func NewCustomer(telegramID int64, username string) Customer {
@@ -40,6 +43,28 @@ func (c *Customer) UpdateState(newState State) {
 }
 func (c Customer) GetTgState() uint8 {
 	return c.TgState.V
+}
+
+func (c *Customer) SetLastEditPosition(p Position) error {
+	if c.LastEditPosition != nil {
+		return ErrLastPositionAlreadyExists
+	}
+	c.LastEditPosition = &p
+	return nil
+}
+
+func (c *Customer) UpdateLastEditPositionSize(s string) {
+	c.LastEditPosition.Size = s
+}
+
+func (c *Customer) UpdateLastEditPositionPrice(priceRub uint64, priceYuan uint64) {
+	c.LastEditPosition.PriceRUB = priceRub
+	c.LastEditPosition.PriceYUAN = priceYuan
+
+}
+
+func (c *Customer) UpdateLastEditPositionLink(link string) {
+	c.LastEditPosition.ShopLink = link
 }
 
 func MakeUsername(firstName string, lastName string, username string) string {

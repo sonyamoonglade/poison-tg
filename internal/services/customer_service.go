@@ -28,3 +28,7 @@ func (c *customerService) GetByTelegramID(ctx context.Context, telegramID int64)
 func (c *customerService) UpdateState(ctx context.Context, telegramID int64, newState domain.State) error {
 	return c.customerRepo.UpdateState(ctx, telegramID, newState)
 }
+
+func (c *customerService) PrintDb() {
+	c.customerRepo.PrintDb()
+}

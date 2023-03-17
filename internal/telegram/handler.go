@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
@@ -180,15 +181,39 @@ func (h *handler) MakeOrderGuideStep4(ctx context.Context, chatID int64, control
 
 func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 	var (
-		chatID = m.Chat.ID
+		chatID     = m.Chat.ID
+		telegramID = chatID
 	)
 	// validate state
 	if err := h.checkRequiredState(ctx, domain.StateWaitingForSize, chatID); err != nil {
 		return err
 	}
+	customer, err := h.customerService.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return fmt.Errorf("customerService.GetByTelegramID: %w", err)
+	}
+	position := domain.NewEmptyPosition()
+	sizeText := m.Text
+	if err := customer.SetLastEditPosition(position); err != nil {
+		// handle if last pos already exists
+		return err
+	}
+	customer.UpdateLastEditPositionSize(sizeText)
+	fmt.Println("customer ent: ", customer.LastEditPosition)
+	defer func() {
+		customer, _ := h.customerService.GetByTelegramID(ctx, telegramID)
+		fmt.Println(customer.LastEditPosition)
+	}()
 
-	//TODO implement me
-	panic("implement me")
+	if err := h.customerService.Save(ctx, customer); err != nil {
+		return fmt.Errorf("customerService.Save: %w", err)
+	}
+
+	if err := h.cleanSend(tg.NewMessage(chatID, "Thanks for size! Your size: "+sizeText)); err != nil {
+		return err
+	}
+
+	return h.cleanSend(tg.NewMessage(chatID, "select the button"))
 }
 
 func (h *handler) HandlePriceInput(ctx context.Context, m *tg.Message) error {
@@ -221,9 +246,11 @@ func (h *handler) sendWaitForSizeCommandAndUpdateCustomerState(ctx context.Conte
 	// if no such customer yet then create it
 	if err != nil && errors.Is(err, domain.ErrCustomerNotFound) {
 		// save to db
+		defer h.customerService.PrintDb()
 		if err := h.customerService.Save(ctx, domain.NewCustomer(telegramID, username)); err != nil {
 			return err
 		}
+
 	} else if err != nil {
 		// report internal error
 		return err
