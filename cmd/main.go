@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/sonyamoonglade/poison-tg/config"
-	"github.com/sonyamoonglade/poison-tg/internal/domain"
+	"github.com/sonyamoonglade/poison-tg/internal/repositories"
 	"github.com/sonyamoonglade/poison-tg/internal/services"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram"
 	"github.com/sonyamoonglade/poison-tg/pkg/database"
@@ -41,14 +43,15 @@ func run() error {
 		return fmt.Errorf("can't read config: %w", err)
 	}
 
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	// defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 
-	// mongo, err := database.Connect(ctx, cfg.Database.URI, cfg.Database.Name)
-	// if err != nil {
-	// 	return fmt.Errorf("error connecting to mongo: %w", err)
-	// }
-	customerRepo := database.NewInMemoryRepo[domain.Customer]()
+	mongo, err := database.Connect(ctx, cfg.Database.URI, cfg.Database.Name)
+	if err != nil {
+		return fmt.Errorf("error connecting to mongo: %w", err)
+	}
+	customerRepo := repositories.NewCustomerRepo(mongo.Collection("customers"))
+	//customerRepo := database.NewInMemoryRepo[domain.Customer]()
 	bot, err := telegram.NewBot(telegram.Config{
 		Token: cfg.Bot.Token,
 	})
@@ -60,11 +63,9 @@ func run() error {
 		return fmt.Errorf("can't load templates: %w", err)
 	}
 
-	customerService := services.NewCustomerService(customerRepo)
-	handler := telegram.NewHandler(bot, customerService)
-	router := telegram.NewRouter(bot.GetUpdates(), handler, cfg.Bot.HandlerTimeout)
-
-	// _ = mongo
+	yuanService := services.NewYuanService()
+	handler := telegram.NewHandler(bot, customerRepo, yuanService)
+	router := telegram.NewRouter(bot.GetUpdates(), handler, customerRepo, cfg.Bot.HandlerTimeout)
 
 	router.Bootstrap()
 	return nil

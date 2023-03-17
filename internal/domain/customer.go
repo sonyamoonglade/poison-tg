@@ -8,26 +8,25 @@ import (
 
 var (
 	// Default state not waiting for any make order response
-	StateDefault               = State{V: 0}
-	StateWaitingForSize        = State{V: 1}
-	StateWaitingForPrice       = State{V: 2}
-	StateWaitingForButtonColor = State{V: 3}
-	StateWaitingForLink        = State{V: 4}
+	StateDefault          = State{V: 0}
+	StateWaitingForSize   = State{V: 1}
+	StateWaitingForPrice  = State{V: 2}
+	StateWaitingForButton = State{V: 3}
+	StateWaitingForLink   = State{V: 4}
 )
 
 var (
-	ErrCustomerNotFound          = errors.New("customer not found")
-	ErrLastPositionAlreadyExists = errors.New("last position already exists")
+	ErrCustomerNotFound = errors.New("customer not found")
 )
 
 type Customer struct {
-	CustomerID       primitive.ObjectID `json:"customerId" json:"customerID,omitempty" bson:"customerId,omitempty"`
-	TelegramID       int64              `json:"telegramID" bson:"telegramID"`
+	CustomerID       primitive.ObjectID `json:"customerId" json:"customerID,omitempty" bson:"_id,omitempty"`
+	TelegramID       int64              `json:"telegramID" bson:"telegramId"`
 	Username         string             `json:"username" bson:"username"`
 	PhoneNumber      *string            `json:"phoneNumber,omitempty" bson:"phoneNumber,omitempty"`
 	TgState          State              `json:"state" bson:"state"`
 	Cart             Cart               `json:"cart" bson:"cart"`
-	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition,omitempty"`
+	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition"`
 }
 
 func NewCustomer(telegramID int64, username string) Customer {
@@ -41,16 +40,12 @@ func NewCustomer(telegramID int64, username string) Customer {
 func (c *Customer) UpdateState(newState State) {
 	c.TgState = newState
 }
-func (c Customer) GetTgState() uint8 {
+func (c *Customer) GetTgState() uint8 {
 	return c.TgState.V
 }
 
-func (c *Customer) SetLastEditPosition(p Position) error {
-	if c.LastEditPosition != nil {
-		return ErrLastPositionAlreadyExists
-	}
+func (c *Customer) SetLastEditPosition(p Position) {
 	c.LastEditPosition = &p
-	return nil
 }
 
 func (c *Customer) UpdateLastEditPositionSize(s string) {
@@ -65,6 +60,10 @@ func (c *Customer) UpdateLastEditPositionPrice(priceRub uint64, priceYuan uint64
 
 func (c *Customer) UpdateLastEditPositionLink(link string) {
 	c.LastEditPosition.ShopLink = link
+}
+
+func (c *Customer) UpdateLastEditPositionButtonColor(button Button) {
+	c.LastEditPosition.Button = button
 }
 
 func MakeUsername(firstName string, lastName string, username string) string {

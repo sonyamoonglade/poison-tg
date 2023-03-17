@@ -26,10 +26,14 @@ const (
 	orderGuideStep3Callback
 	orderGuideStep4Callback
 	makeOrderCallback
+	buttonTorqoiseSelectCallback
+	buttonGreySelectCallback
+	button95SelectCallback
 )
 
 var (
-	menuButtons = menu()
+	menuButtons        = menu()
+	selectColorButtons = selectButtonColor()
 )
 
 func injectMessageIDs(callback int, msgIDs ...int64) string {
@@ -118,9 +122,12 @@ func prepareOrderGuideButtons(step int, msgIDs ...int64) tg.InlineKeyboardMarkup
 	)
 }
 
-func orderGuideToMakeOrder() tg.InlineKeyboardMarkup {
+func selectButtonColor() tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Pereity k oformleniy zakaza", strconv.Itoa(makeOrderCallback))),
+			tg.NewInlineKeyboardButtonData("Бирюзовый", strconv.Itoa(buttonTorqoiseSelectCallback)),
+			tg.NewInlineKeyboardButtonData("Серый", strconv.Itoa(buttonGreySelectCallback)),
+			tg.NewInlineKeyboardButtonData("95% БУ", strconv.Itoa(button95SelectCallback)),
+		),
 	)
 }

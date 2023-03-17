@@ -1,15 +1,8 @@
 package services
 
-import (
-	"context"
-
-	"github.com/sonyamoonglade/poison-tg/internal/domain"
-)
-
-type Customer interface {
-	Save(ctx context.Context, c domain.Customer) error
-	GetByTelegramID(ctx context.Context, telegramID int64) (domain.Customer, error)
-	UpdateState(ctx context.Context, telegramID int64, newState domain.State) error
-	// remove
-	PrintDb()
+type YuanService interface {
+	GetYuanRate() (float64, error)
+	// ApplyFormula math.Ceil the value up
+	// Accepts price in yuan, returns price in rub
+	ApplyFormula(x_yuan uint64) (x_rub uint64, err error)
 }
