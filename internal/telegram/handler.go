@@ -217,7 +217,7 @@ func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 		return err
 	}
 
-	return h.cleanSend(tg.NewMessage(chatID, "send me price in YUAN"))
+	return h.cleanSend(tg.NewMessage(chatID, "Отправьте прайс в юанях (шаг 2) 👍"))
 }
 
 func (h *handler) HandlePriceInput(ctx context.Context, m *tg.Message) error {
@@ -254,10 +254,10 @@ func (h *handler) HandlePriceInput(ctx context.Context, m *tg.Message) error {
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("your price in rub: %d", priceRub))); err != nil {
+	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("your price in rub: %d ₽", priceRub))); err != nil {
 		return err
 	}
-	return h.sendWithKeyboard(chatID, fmt.Sprintf("Выберите цвет кнопки с соотвествующей ценой: %d ¥", priceYuan), selectColorButtons)
+	return h.sendWithKeyboard(chatID, fmt.Sprintf("Выберите цвет кнопки с соотвествующей ценой: %d ¥ (шаг 3) 👍", priceYuan), selectColorButtons)
 }
 
 func (h *handler) HandleButtonSelect(ctx context.Context, chatID int64, button domain.Button) error {
@@ -286,7 +286,7 @@ func (h *handler) HandleButtonSelect(ctx context.Context, chatID int64, button d
 	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Спасибо! Вы выбрали цвет: %s!", string(button)))); err != nil {
 		return err
 	}
-	return h.cleanSend(tg.NewMessage(chatID, "Отправьте ссылку на выбранный товар"))
+	return h.cleanSend(tg.NewMessage(chatID, "Отправьте ссылку на выбранный товар (шаг 4) 👍"))
 }
 
 func (h *handler) HandleLinkInput(ctx context.Context, chatID int64, link string) error {
