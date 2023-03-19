@@ -15,7 +15,17 @@ func (c *Cart) Remove(positionID string) {
 			break
 		}
 	}
+}
 
+func (c *Cart) RemoveAt(index int) {
+	for i := range *c {
+		if i == index {
+			// swap to end and slice
+			c.swap(i, len(*c)-1)
+			*c = (*c)[:len(*c)-1]
+			break
+		}
+	}
 }
 
 func (c *Cart) swap(i, j int) {

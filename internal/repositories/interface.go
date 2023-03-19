@@ -15,3 +15,8 @@ type Customer interface {
 	Update(ctx context.Context, customerID primitive.ObjectID, dto dto.UpdateCustomerDTO) error
 	PrintDb()
 }
+
+type Order interface {
+	GetByShortID(ctx context.Context, shortID string) (domain.Order, error)
+	Save(ctx context.Context, o domain.Order) error
+}

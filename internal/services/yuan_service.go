@@ -5,7 +5,7 @@ import "math"
 type yuanService struct {
 }
 
-func NewYuanService() YuanService {
+func NewYuanService() Yuan {
 	return &yuanService{}
 }
 
@@ -18,7 +18,7 @@ const (
 	// yuan
 	chinaFee = 75
 	// rub
-	shopFee = 875
+	shopFee = 850 - 111
 	// rub
 	deliveryFee = 35
 )

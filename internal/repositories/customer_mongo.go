@@ -49,6 +49,11 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 	if dto.Username != nil {
 		update["username"] = *dto.Username
 	}
+
+	if dto.FullName != nil {
+		update["fullName"] = *dto.FullName
+	}
+
 	_, err := c.customers.UpdateByID(ctx, customerID, bson.M{"$set": update})
 	if err != nil {
 		return err
