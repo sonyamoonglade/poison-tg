@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -18,8 +19,8 @@ const (
 // todo: change from iota
 const (
 	menuCatalogCallback = iota + 1
-	menuGetBucketCallback
 	menuTrackOrderCallback
+	menuCalculatorCallback
 	menuMakeOrderCallback
 	orderGuideStep1Callback
 	orderGuideStep2Callback
@@ -29,11 +30,20 @@ const (
 	buttonTorqoiseSelectCallback
 	buttonGreySelectCallback
 	button95SelectCallback
+	addPositionCallback
+	editCartCallback
 )
 
+const editCartRemovePositionOffset = 1000
+
 var (
-	menuButtons        = menu()
-	selectColorButtons = selectButtonColor()
+	initialMenuKeyboard                = initialBottomMenu()
+	menuButtons                        = menu()
+	selectColorButtons                 = selectButtonColor()
+	bottomMenuButtons                  = bottomMenu()
+	bottomMenuWithouAddPositionButtons = bottomMenuWithoutAddPosition()
+	cartPreviewButtons                 = cartPreview()
+	addPositionButtons                 = addPos()
 )
 
 func injectMessageIDs(callback int, msgIDs ...int64) string {
@@ -86,12 +96,11 @@ func menu() tg.InlineKeyboardMarkup {
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Каталог", strconv.Itoa(menuCatalogCallback)),
 		),
-
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Сделать заказ", strconv.Itoa(menuMakeOrderCallback)),
 		),
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Посмотреть корзину", strconv.Itoa(menuGetBucketCallback)),
+			tg.NewInlineKeyboardButtonData("Калькулятор стоимости", strconv.Itoa(menuCalculatorCallback)),
 		),
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Отследить посылку", strconv.Itoa(menuTrackOrderCallback)),
@@ -130,4 +139,76 @@ func selectButtonColor() tg.InlineKeyboardMarkup {
 			tg.NewInlineKeyboardButtonData("95% БУ", strconv.Itoa(button95SelectCallback)),
 		),
 	)
+}
+
+func bottomMenu() tg.ReplyKeyboardMarkup {
+	return tg.NewReplyKeyboard(
+		tg.NewKeyboardButtonRow(
+			tg.NewKeyboardButton(menuCommand),
+		),
+		tg.NewKeyboardButtonRow(
+			tg.NewKeyboardButton(getCartCommand),
+		),
+		tg.NewKeyboardButtonRow(
+			tg.NewKeyboardButton(addPositionCommand),
+		),
+	)
+}
+
+func bottomMenuWithoutAddPosition() tg.ReplyKeyboardMarkup {
+	return tg.NewReplyKeyboard(
+		tg.NewKeyboardButtonRow(
+			tg.NewKeyboardButton(menuCommand),
+		),
+		tg.NewKeyboardButtonRow(
+			tg.NewKeyboardButton(getCartCommand),
+		),
+	)
+}
+
+func initialBottomMenu() tg.ReplyKeyboardMarkup {
+	return tg.NewReplyKeyboard(
+		tg.NewKeyboardButtonRow(
+			tg.NewKeyboardButton(menuCommand),
+		),
+	)
+}
+
+func cartPreview() tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Оформить заказ", strconv.Itoa(makeOrderCallback)),
+		),
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Редактировать корзину", strconv.Itoa(editCartCallback)),
+			tg.NewInlineKeyboardButtonData("Добавить позицию", strconv.Itoa(addPositionCallback)),
+		),
+	)
+}
+
+func addPos() tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Добавить позицию", strconv.Itoa(addPositionCallback)),
+		))
+}
+
+func prepareEditCartButtons(n int, previewCartMsgID int) tg.InlineKeyboardMarkup {
+	keyboard := make([][]tg.InlineKeyboardButton, 0)
+
+	var (
+		numRows = int(math.Ceil(float64(n) / 3))
+		current int
+	)
+
+	for row := 0; row < numRows; row++ {
+		keyboard = append(keyboard, tg.NewInlineKeyboardRow())
+		for col := 0; col < 3 && current < n; col++ {
+			button := tg.NewInlineKeyboardButtonData(strconv.Itoa(current+1), injectMessageIDs(editCartRemovePositionOffset+current+1, int64(previewCartMsgID)))
+			keyboard[row] = append(keyboard[row], button)
+			current++
+		}
+	}
+
+	return tg.NewInlineKeyboardMarkup(keyboard...)
 }

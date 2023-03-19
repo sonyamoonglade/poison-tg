@@ -1,40 +1,72 @@
 package telegram
 
 import (
-	"fmt"
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestLoadTemplates(t *testing.T) {
-	t.Run("should load all values", func(t *testing.T) {
-		mt, st := "menu_template", "start_template"
-		content := fmt.Sprintf(`{"menu":"%s", "start":"%s"}`, mt, st)
-		tmpFile, err := os.Create("test_templates.tmp.json")
-		require.NoError(t, err)
-		tmpFile.Write([]byte(content))
+	testcases := []struct {
+		description string
+		templates   templates
+		expectedErr string
+	}{
+		{
+			description: "missing MENU template",
+			templates: templates{
+				Start:               "start_template",
+				CartPreviewStartFMT: "cart_preview_start_template",
+				CartPreviewEndFMT:   "cart_preview_end_template",
+				CartPositionFMT:     "cart_position_template",
+				CalculatorOutput:    "output",
+			},
+			expectedErr: "missing MENU template",
+		},
+		{
+			description: "missing START template",
+			templates: templates{
+				Menu:                "menu_template",
+				CartPreviewStartFMT: "cart_preview_start_template",
+				CartPreviewEndFMT:   "cart_preview_end_template",
+				CartPositionFMT:     "cart_position_template",
+				CalculatorOutput:    "output",
+			},
+			expectedErr: "missing START template",
+		},
+		{
+			description: "empty file",
+			templates:   templates{},
+			expectedErr: "can't decode file content. File is empty",
+		},
+	}
 
-		err = LoadTemplates(tmpFile.Name())
-		require.NoError(t, err)
+	for _, tc := range testcases {
+		tempFile, err := ioutil.TempFile("", "test_templates.json")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		require.Equal(t, GetTemplate().Menu, mt)
-		require.Equal(t, GetTemplate().Start, st)
+		jsonData, err := json.Marshal(tc.templates)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tempFile.Write(jsonData); err != nil {
+			t.Fatal(err)
+		}
+		tempFile.Close()
+		defer os.Remove(tempFile.Name())
 
-		defer os.Remove(tmpFile.Name())
-	})
+		t.Run(tc.description, func(t *testing.T) {
+			err := LoadTemplates(tempFile.Name())
 
-	t.Run("shoud load but not all values are present in file", func(t *testing.T) {
-		mt := "menu_template"
-		content := fmt.Sprintf(`{"menu":"%s"}`, mt)
-		tmpFile, err := os.Create("test_templates.tmp.json")
-		require.NoError(t, err)
-		tmpFile.Write([]byte(content))
-
-		err = LoadTemplates(tmpFile.Name())
-		require.Error(t, err)
-		require.Equal(t, "missing START template", err.Error())
-		defer os.Remove(tmpFile.Name())
-	})
+			if err == nil {
+				t.Errorf("LoadTemplates() should have failed")
+			}
+			if err.Error() != tc.expectedErr {
+				t.Errorf("expected '%s', but got '%s'", tc.expectedErr, err.Error())
+			}
+		})
+	}
 }
