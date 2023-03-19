@@ -13,7 +13,7 @@ func stringPtr(s string) *string {
 func TestNewOrder(t *testing.T) {
 	customer1 := Customer{
 		TelegramID:  123,
-		Username:    "john",
+		Username:    stringPtr("john"),
 		FullName:    stringPtr("John Doe"),
 		PhoneNumber: stringPtr("123456789"),
 		TgState:     State{V: 1},
