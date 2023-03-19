@@ -15,9 +15,13 @@ import (
 
 func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 	var (
-		chatID     = m.Chat.ID
-		telegramID = chatID
-		sizeText   = strings.TrimSpace(m.Text)
+		chatID       = m.Chat.ID
+		telegramID   = chatID
+		firstName    = m.From.FirstName
+		lastName     = m.From.LastName
+		chatUsername = m.From.UserName
+		username     = domain.MakeUsername(firstName, lastName, chatUsername)
+		sizeText     = strings.TrimSpace(m.Text)
 	)
 	// validate state
 	if err := h.checkRequiredState(ctx, domain.StateWaitingForSize, chatID); err != nil {
@@ -35,6 +39,7 @@ func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 	updateDTO := dto.UpdateCustomerDTO{
 		LastPosition: customer.LastEditPosition,
 		State:        &domain.StateWaitingForButton,
+		Username:     &username,
 	}
 
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
@@ -165,16 +170,10 @@ func (h *handler) HandleLinkInput(ctx context.Context, m *tg.Message) error {
 }
 
 func (h *handler) AddPosition(ctx context.Context, m *tg.Message) error {
-	var (
-		chatID       = m.Chat.ID
-		firstName    = m.From.UserName
-		lastName     = m.From.LastName
-		chatUsername = m.From.UserName
-	)
-	return h.addPosition(ctx, chatID, domain.MakeUsername(firstName, lastName, chatUsername))
+	return h.addPosition(ctx, m.Chat.ID)
 }
 
-func (h *handler) addPosition(ctx context.Context, telegramID int64, username string) error {
+func (h *handler) addPosition(ctx context.Context, telegramID int64) error {
 	chatID := telegramID
 	_, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
 	// if no such customer yet then create it
@@ -183,7 +182,7 @@ func (h *handler) addPosition(ctx context.Context, telegramID int64, username st
 			return err
 		}
 		// save to db
-		if err := h.customerRepo.Save(ctx, domain.NewCustomer(telegramID, username)); err != nil {
+		if err := h.customerRepo.Save(ctx, domain.NewCustomer(telegramID)); err != nil {
 			return err
 		}
 	}

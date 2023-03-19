@@ -29,7 +29,7 @@ var (
 type Customer struct {
 	CustomerID       primitive.ObjectID `json:"customerId" json:"customerID,omitempty" bson:"_id,omitempty"`
 	TelegramID       int64              `json:"telegramID" bson:"telegramId"`
-	Username         string             `json:"username" bson:"username"`
+	Username         *string            `json:"username,omitempty" bson:"username,omitempty"`
 	FullName         *string            `json:"fullName,omitempty" bson:"fullName,omitempty"`
 	PhoneNumber      *string            `json:"phoneNumber,omitempty" bson:"phoneNumber,omitempty"`
 	TgState          State              `json:"state" bson:"state"`
@@ -37,10 +37,9 @@ type Customer struct {
 	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition"`
 }
 
-func NewCustomer(telegramID int64, username string) Customer {
+func NewCustomer(telegramID int64) Customer {
 	return Customer{
 		TelegramID: telegramID,
-		Username:   username,
 		TgState:    StateDefault,
 	}
 }

@@ -96,9 +96,15 @@ func (r *Router) Bootstrap() {
 			r.wg.Add(1)
 			go func() {
 				if err := r.mapToHandler(ctx, update); err != nil {
+					var username string = "default"
+					var id int64 = 0
+					if update.FromChat() != nil {
+						username = update.FromChat().UserName
+						id = update.FromChat().ID
+					}
 					logger.Get().Error("error in handler occurred",
-						zap.String("from", update.FromChat().UserName),
-						zap.Int64("userID", update.FromChat().ID),
+						zap.String("from", username),
+						zap.Int64("userID", id),
 						zap.Error(err))
 					r.h.HandleError(ctx, err, update)
 				}

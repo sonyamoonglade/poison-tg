@@ -4,18 +4,13 @@ import (
 	"context"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 )
 
 func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error {
 	var (
-		chatID       = m.Chat.ID
-		firstName    = m.From.FirstName
-		lastName     = m.From.LastName
-		chatUsername = m.From.UserName
-		telegramID   = chatID
-		username     = domain.MakeUsername(firstName, lastName, chatUsername)
+		chatID     = m.Chat.ID
+		telegramID = chatID
 	)
 	url := "https://picsum.photos/300/300"
 	image := tg.NewInputMediaPhoto(tg.FileURL(url))
@@ -38,7 +33,7 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 		return err
 	}
 
-	return h.addPosition(ctx, telegramID, username)
+	return h.addPosition(ctx, telegramID)
 }
 
 func (h *handler) MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
