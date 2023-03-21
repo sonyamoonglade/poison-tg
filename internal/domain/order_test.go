@@ -75,7 +75,7 @@ func TestNewOrder(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			order := NewOrder(test.customer, test.deliveryAddress)
+			order := NewOrder(test.customer, test.deliveryAddress, false, "abcd")
 			require.Equal(t, test.expectedOrder.Status, order.Status)
 			require.Equal(t, test.expectedOrder.AmountRUB, order.AmountRUB)
 			require.Equal(t, test.expectedOrder.AmountYUAN, order.AmountYUAN)

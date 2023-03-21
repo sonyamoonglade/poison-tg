@@ -22,7 +22,7 @@ func TestLoadTemplates(t *testing.T) {
 				CartPositionFMT:     "cart_position_template",
 				CalculatorOutput:    "output",
 			},
-			expectedErr: "missing MENU template",
+			expectedErr: "missing Menu template",
 		},
 		{
 			description: "missing START template",
@@ -33,7 +33,7 @@ func TestLoadTemplates(t *testing.T) {
 				CartPositionFMT:     "cart_position_template",
 				CalculatorOutput:    "output",
 			},
-			expectedErr: "missing START template",
+			expectedErr: "missing Start template",
 		},
 		{
 			description: "empty file",
