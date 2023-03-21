@@ -24,7 +24,7 @@ type StateProvider interface {
 
 type RouteHandler interface {
 	// Main menu
-	Start(ctx context.Context, chatID int64) error
+	Start(ctx context.Context, m *tg.Message) error
 	Menu(ctx context.Context, chatID int64) error
 	Catalog(ctx context.Context, chatID int64) error
 	Calculator(ctx context.Context, chatID int64) error
@@ -37,6 +37,10 @@ type RouteHandler interface {
 
 	// Add position is like StartmakeOrderGuide but without instruction
 	AddPosition(ctx context.Context, m *tg.Message) error
+
+	HandleLocationInput(ctx context.Context, chatID int64, loc domain.Location) error
+	HandleOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error
+
 	// StartMakeOrderGuide is initial guide handler
 	StartMakeOrderGuide(ctx context.Context, m *tg.Message) error
 	// MakeOrderGuideStep1
@@ -46,12 +50,15 @@ type RouteHandler interface {
 	MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
 	MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
 
+	AskForFIO(ctx context.Context, chatID int64) error
+	// use tg.Message because user types in and userID is user's
 	HandleFIOInput(ctx context.Context, m *tg.Message) error
 	HandlePhoneNumberInput(ctx context.Context, m *tg.Message) error
 	HandleDeliveryAddressInput(ctx context.Context, m *tg.Message) error
 
 	HandleSizeInput(ctx context.Context, m *tg.Message) error
-	HandleButtonSelect(ctx context.Context, m *tg.Message, button domain.Button) error
+	// use tg.CallbackQuery because callback is asosiated with c.User.ID, message is from bot
+	HandleButtonSelect(ctx context.Context, c *tg.CallbackQuery, button domain.Button) error
 	HandlePriceInput(ctx context.Context, m *tg.Message) error
 	HandleLinkInput(ctx context.Context, m *tg.Message) error
 
@@ -142,7 +149,7 @@ func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 		zap.Time("date", m.Time()))
 	switch true {
 	case cmd(startCommand):
-		return r.h.Start(ctx, chatID)
+		return r.h.Start(ctx, m)
 	case cmd(menuCommand):
 		return r.h.Menu(ctx, chatID)
 	case cmd(getCartCommand):
@@ -168,14 +175,11 @@ func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 		case domain.StateWaitingForCalculatorInput:
 			return r.h.HandleCalculatorInput(ctx, m)
 		case domain.StateWaitingForFIO:
-			//todo
-			return nil
+			return r.h.HandleFIOInput(ctx, m)
 		case domain.StateWaitingForPhoneNumber:
-			//todo
-			return nil
+			return r.h.HandlePhoneNumberInput(ctx, m)
 		case domain.StateWaitingForDeliveryAddress:
-			// todo
-			return nil
+			return r.h.HandleDeliveryAddressInput(ctx, m)
 		case domain.StateDefault:
 			return ErrNoHandler
 		default:
@@ -190,7 +194,7 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		zap.Time("date", c.Message.Time()))
 	defer r.h.AnswerCallback(c.ID)
 	var (
-		chatID             = c.Message.Chat.ID
+		chatID             = c.From.ID
 		msgID              = c.Message.MessageID
 		intCallbackData    int
 		callbackDataMsgIDs []int64
@@ -216,23 +220,32 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 	case orderGuideStep4Callback:
 		return r.h.MakeOrderGuideStep4(ctx, chatID, msgID, callbackDataMsgIDs...)
 	case makeOrderCallback:
-		return r.h.HandleFIOInput(ctx, c.Message)
+		return r.h.AskForFIO(ctx, chatID)
 	case menuTrackOrderCallback:
 		// TODO
 		return nil
 	case menuCatalogCallback:
 		return r.h.Catalog(ctx, chatID)
 	case buttonTorqoiseSelectCallback:
-		return r.h.HandleButtonSelect(ctx, c.Message, domain.ButtonTorqoise)
+		return r.h.HandleButtonSelect(ctx, c, domain.ButtonTorqoise)
 	case buttonGreySelectCallback:
-		return r.h.HandleButtonSelect(ctx, c.Message, domain.ButtonGrey)
+		return r.h.HandleButtonSelect(ctx, c, domain.ButtonGrey)
 	case button95SelectCallback:
-		return r.h.HandleButtonSelect(ctx, c.Message, domain.Button95)
+		return r.h.HandleButtonSelect(ctx, c, domain.Button95)
 	case editCartCallback:
-		// i know message id of cart msg
 		return r.h.EditCart(ctx, chatID, msgID)
 	case addPositionCallback:
 		return r.h.AddPosition(ctx, c.Message)
+	case izhLocationCallback:
+		return r.h.HandleLocationInput(ctx, chatID, domain.LocationIZH)
+	case spbLocationCallback:
+		return r.h.HandleLocationInput(ctx, chatID, domain.LocationSPB)
+	case othLocationCallback:
+		return r.h.HandleLocationInput(ctx, chatID, domain.LocationOther)
+	case orderTypeNormalCallback:
+		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeNormal)
+	case orderTypeExpressCallback:
+		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeExpress)
 	default:
 		if intCallbackData < editCartRemovePositionOffset {
 			return ErrNoHandler

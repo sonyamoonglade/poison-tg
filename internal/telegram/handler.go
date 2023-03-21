@@ -21,13 +21,17 @@ var (
 type handler struct {
 	b            *Bot
 	customerRepo repositories.Customer
+	businessRepo repositories.Business
+	orderRepo    repositories.Order
 	yuanService  services.Yuan
 }
 
-func NewHandler(bot *Bot, customerRepo repositories.Customer, yuanService services.Yuan) RouteHandler {
+func NewHandler(bot *Bot, customerRepo repositories.Customer, businessRepo repositories.Business, orderRepo repositories.Order, yuanService services.Yuan) *handler {
 	return &handler{
 		b:            bot,
 		customerRepo: customerRepo,
+		businessRepo: businessRepo,
+		orderRepo:    orderRepo,
 		yuanService:  yuanService,
 	}
 }
@@ -46,7 +50,11 @@ func (h *handler) HandleCalculatorInput(ctx context.Context, m *tg.Message) erro
 		return fmt.Errorf("strconv.ParseUint: %w", err)
 	}
 
-	priceRub, err := h.yuanService.ApplyFormula(inputUint)
+	// todo: fixme
+	priceRub, err := h.yuanService.ApplyFormula(inputUint, services.UseFormulaArguments{
+		Location:  0,
+		IsExpress: false,
+	})
 	if err != nil {
 		return err
 	}

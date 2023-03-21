@@ -51,7 +51,9 @@ func run() error {
 		return fmt.Errorf("error connecting to mongo: %w", err)
 	}
 	customerRepo := repositories.NewCustomerRepo(mongo.Collection("customers"))
-	//customerRepo := database.NewInMemoryRepo[domain.Customer]()
+	orderRepo := repositories.NewOrderRepo(mongo.Collection("orders"))
+	businessRepo := repositories.NewBusinessRepo(mongo.Collection("business"))
+
 	bot, err := telegram.NewBot(telegram.Config{
 		Token: cfg.Bot.Token,
 	})
@@ -63,12 +65,18 @@ func run() error {
 		return fmt.Errorf("can't load templates: %w", err)
 	}
 
-	yuanService := services.NewYuanService()
-	handler := telegram.NewHandler(bot, customerRepo, yuanService)
+	yuanService := services.NewYuanService(new(rateProvider))
+	handler := telegram.NewHandler(bot, customerRepo, businessRepo, orderRepo, yuanService)
 	router := telegram.NewRouter(bot.GetUpdates(), handler, customerRepo, cfg.Bot.HandlerTimeout)
 
 	router.Bootstrap()
 	return nil
+}
+
+type rateProvider struct{}
+
+func (r *rateProvider) GetYuanRate() (float64, error) {
+	return 11.6, nil
 }
 
 func readCmdArgs() (string, string, bool, bool) {

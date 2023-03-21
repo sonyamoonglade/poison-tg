@@ -18,5 +18,10 @@ type Customer interface {
 
 type Order interface {
 	GetByShortID(ctx context.Context, shortID string) (domain.Order, error)
+	GetFreeShortID(ctx context.Context) (string, error)
 	Save(ctx context.Context, o domain.Order) error
+}
+
+type Business interface {
+	GetRequisites(ctx context.Context) (domain.Requisites, error)
 }

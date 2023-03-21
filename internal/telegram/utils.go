@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
@@ -21,7 +22,7 @@ func (h *handler) cleanSend(c tg.Chattable) error {
 func (h *handler) checkRequiredState(ctx context.Context, want domain.State, telegramID int64) error {
 	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
 	if err != nil {
-		return err
+		return fmt.Errorf("checkRequiredState: %w", err)
 	}
 	if customer.TgState != want {
 		return ErrInvalidState

@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/sonyamoonglade/poison-tg/pkg/functools"
-	"github.com/sonyamoonglade/poison-tg/pkg/nanoid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -30,11 +29,12 @@ type Order struct {
 	AmountYUAN      uint64             `json:"amountYuan" bson:"amountYuan"`
 	DeliveryAddress string             `json:"deliveryAddress" bson:"deliveryAddress"`
 	IsPaid          bool               `json:"isPaid" bson:"isPaid"`
+	IsExpress       bool               `json:"isExpress" bson:"isExpress"`
 	IsApproved      bool               `json:"isApproved" bson:"isApproved"`
 	Status          Status             `json:"status" bson:"status"`
 }
 
-func NewOrder(customer Customer, deliveryAddress string) Order {
+func NewOrder(customer Customer, deliveryAddress string, isExpress bool, shortID string) Order {
 	type total struct {
 		rub, yuan uint64
 	}
@@ -47,12 +47,13 @@ func NewOrder(customer Customer, deliveryAddress string) Order {
 
 	return Order{
 		Customer:        customer,
-		ShortID:         nanoid.GenerateNanoID(),
+		ShortID:         shortID,
 		Cart:            customer.Cart,
 		AmountRUB:       totals.rub,
 		AmountYUAN:      totals.yuan,
 		DeliveryAddress: deliveryAddress,
 		IsPaid:          false,
+		IsExpress:       isExpress,
 		IsApproved:      false,
 		Status:          StatusDefault,
 	}

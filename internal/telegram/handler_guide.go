@@ -4,14 +4,106 @@ import (
 	"context"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/sonyamoonglade/poison-tg/internal/domain"
+	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
 	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 )
+
+func (h *handler) askForOrderType(ctx context.Context, chatID int64) error {
+	return h.sendWithKeyboard(chatID, "Выберите тип заказа", orderTypeButtons)
+}
+
+func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error {
+	var telegramID = chatID
+
+	if err := h.checkRequiredState(ctx, domain.StateWaitingForOrderType, chatID); err != nil {
+		return err
+	}
+
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+
+	customer.UpdateMetaOrderType(typ)
+
+	updateDTO := dto.UpdateCustomerDTO{
+		Meta: &customer.Meta,
+	}
+
+	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
+		return err
+	}
+
+	switch typ {
+	case domain.OrderTypeExpress:
+		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Экспресс]"))
+		break
+	case domain.OrderTypeNormal:
+		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Обычный]"))
+		break
+	}
+	if err != nil {
+		return err
+	}
+
+	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForLocation); err != nil {
+		return err
+	}
+
+	return h.askForLocation(ctx, chatID)
+}
+
+func (h *handler) askForLocation(ctx context.Context, chatID int64) error {
+	return h.sendWithKeyboard(chatID, "Откуда вы?", locationButtons)
+}
+
+func (h *handler) HandleLocationInput(ctx context.Context, chatID int64, loc domain.Location) error {
+	var telegramID = chatID
+
+	if err := h.checkRequiredState(ctx, domain.StateWaitingForLocation, chatID); err != nil {
+		return err
+	}
+
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+
+	customer.UpdateMetaLocation(loc)
+
+	updateDTO := dto.UpdateCustomerDTO{
+		Meta: &customer.Meta,
+	}
+
+	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
+		return err
+	}
+
+	switch loc {
+	case domain.LocationSPB:
+		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Из Питера]"))
+		break
+	case domain.LocationIZH:
+		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Из Ижевска]"))
+		break
+	case domain.LocationOther:
+		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Из другого города]"))
+		break
+	}
+	if err != nil {
+		return err
+	}
+
+	return h.addPosition(ctx, telegramID)
+}
 
 func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error {
 	var (
 		chatID     = m.Chat.ID
 		telegramID = chatID
 	)
+
 	url := "https://picsum.photos/300/300"
 	image := tg.NewInputMediaPhoto(tg.FileURL(url))
 	image.Caption = "У меня есть желание привезти лишь то,что нужно, поэтому, (имя юзера), предупреждаю, китайцы уже позаботились о нас и предоставили к каждому размерному товару - размерную сетку разных стран, тебе лишь нужно выбрать подходящий размер. Не ошибись с выбором, Стрелок  🤠 Поехали?"
@@ -33,7 +125,20 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 		return err
 	}
 
-	return h.addPosition(ctx, telegramID)
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+
+	if len(customer.Cart) > 0 {
+		return h.addPosition(ctx, chatID)
+	}
+
+	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForOrderType); err != nil {
+		return err
+	}
+
+	return h.askForOrderType(ctx, chatID)
 }
 
 func (h *handler) MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {

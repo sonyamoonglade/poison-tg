@@ -54,6 +54,15 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 		update["fullName"] = *dto.FullName
 	}
 
+	if dto.Meta != nil {
+		if dto.Meta.Location != nil {
+			update["meta.location"] = dto.Meta.Location
+		}
+		if dto.Meta.NextOrderType != nil {
+			update["meta.nextOrderType"] = dto.Meta.NextOrderType
+		}
+	}
+
 	_, err := c.customers.UpdateByID(ctx, customerID, bson.M{"$set": update})
 	if err != nil {
 		return err

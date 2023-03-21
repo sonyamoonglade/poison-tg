@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
+
+	"github.com/sonyamoonglade/poison-tg/internal/domain"
 )
 
 var t = new(templates)
@@ -16,6 +19,9 @@ type templates struct {
 	CartPreviewEndFMT   string `json:"cartPreviewEnd,omitempty"`
 	CartPositionFMT     string `json:"cartPosition,omitempty"`
 	CalculatorOutput    string `json:"calculatorOutput,omitempty"`
+	OrderStart          string `json:"order,omitempty"`
+	OrderEnd            string `json:"orderEnd,omitempty"`
+	Requisites          string `json:"requisites,omitempty"`
 }
 
 func getTemplate() *templates {
@@ -36,27 +42,19 @@ func LoadTemplates(path string) error {
 		return fmt.Errorf("can't decode file content: %w", err)
 	}
 
-	if templates.Menu == "" {
-		return fmt.Errorf("missing MENU template")
+	v := reflect.ValueOf(&templates).Elem()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		if field.Interface() == "" {
+			return fmt.Errorf("missing %s template", v.Type().Field(i).Name)
+		}
 	}
-	if templates.Start == "" {
-		return fmt.Errorf("missing START template")
-	}
-	if templates.CartPreviewStartFMT == "" {
-		return fmt.Errorf("missing CART_PREVIEW_START_FMT template")
-	}
-	if templates.CartPreviewEndFMT == "" {
-		return fmt.Errorf("missing CART_PREVIEW_END_FMT template")
-	}
-	if templates.CartPositionFMT == "" {
-		return fmt.Errorf("missing CART_POSITION_FMT template")
-	}
-	if templates.CalculatorOutput == "" {
-		return fmt.Errorf("missing CALCULATOR_OUTPUT template")
-	}
+
 	*t = templates
 	return nil
 }
+
 func getCartPreviewStartTemplate(numPositions int) string {
 	return fmt.Sprintf(t.CartPreviewStartFMT, numPositions)
 }
@@ -70,6 +68,9 @@ type cartPositionPreviewArgs struct {
 }
 
 func getPositionTemplate(args cartPositionPreviewArgs) string {
+	if args.size == "#" {
+		args.size = "без размера"
+	}
 	return fmt.Sprintf(t.CartPositionFMT, args.n, args.link, args.size, args.priceRub, args.priceYuan)
 }
 func getCartPreviewEndTemplate(totalRub uint64, totalYuan uint64) string {
@@ -78,4 +79,24 @@ func getCartPreviewEndTemplate(totalRub uint64, totalYuan uint64) string {
 
 func getCalculatorOutput(priceForSPBRub, priceForOuterTown uint64) string {
 	return fmt.Sprintf(t.CalculatorOutput, priceForSPBRub, priceForOuterTown)
+}
+
+type orderStartArgs struct {
+	fullName        string
+	shortOrderID    string
+	phoneNumber     string
+	deliveryAddress string
+	nCartItems      int
+}
+
+func getOrderStart(args orderStartArgs) string {
+	return fmt.Sprintf(t.OrderStart, args.fullName, args.shortOrderID, args.fullName, args.phoneNumber, args.deliveryAddress, args.nCartItems)
+}
+
+func getOrderEnd(amountRub uint64) string {
+	return fmt.Sprintf(t.OrderEnd, amountRub)
+}
+
+func getRequisites(reqs domain.Requisites, shortOrderID string) string {
+	return fmt.Sprintf(t.Requisites, shortOrderID, reqs.SberID, reqs.TinkoffID, shortOrderID)
 }

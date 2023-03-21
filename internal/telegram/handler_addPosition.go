@@ -2,7 +2,6 @@ package telegram
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,18 +9,15 @@ import (
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
+	"github.com/sonyamoonglade/poison-tg/internal/services"
 	"github.com/sonyamoonglade/poison-tg/pkg/utils/url"
 )
 
 func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 	var (
-		chatID       = m.Chat.ID
-		telegramID   = chatID
-		firstName    = m.From.FirstName
-		lastName     = m.From.LastName
-		chatUsername = m.From.UserName
-		username     = domain.MakeUsername(firstName, lastName, chatUsername)
-		sizeText     = strings.TrimSpace(m.Text)
+		chatID     = m.Chat.ID
+		telegramID = chatID
+		sizeText   = strings.TrimSpace(m.Text)
 	)
 	// validate state
 	if err := h.checkRequiredState(ctx, domain.StateWaitingForSize, chatID); err != nil {
@@ -39,7 +35,6 @@ func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 	updateDTO := dto.UpdateCustomerDTO{
 		LastPosition: customer.LastEditPosition,
 		State:        &domain.StateWaitingForButton,
-		Username:     &username,
 	}
 
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
@@ -53,9 +48,9 @@ func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 	return h.sendWithKeyboard(chatID, "Выберите цвет кнопки (шаг 2) 👍", selectColorButtons)
 }
 
-func (h *handler) HandleButtonSelect(ctx context.Context, m *tg.Message, button domain.Button) error {
+func (h *handler) HandleButtonSelect(ctx context.Context, c *tg.CallbackQuery, button domain.Button) error {
 	var (
-		chatID     = m.Chat.ID
+		chatID     = c.From.ID
 		telegramID = chatID
 	)
 	// validate state
@@ -98,14 +93,20 @@ func (h *handler) HandlePriceInput(ctx context.Context, m *tg.Message) error {
 	if err != nil {
 		return fmt.Errorf("customerRepo.GetByTelegramID: %w", err)
 	}
+
 	priceYuan, err := strconv.ParseUint(input, 10, 64)
 	if err != nil {
 		return ErrInvalidPriceInput
 	}
-	priceRub, err := h.yuanService.ApplyFormula(priceYuan)
+
+	priceRub, err := h.yuanService.ApplyFormula(priceYuan, services.UseFormulaArguments{
+		Location:  *customer.Meta.Location,
+		IsExpress: *customer.Meta.NextOrderType == domain.OrderTypeExpress,
+	})
 	if err != nil {
 		return err
 	}
+
 	customer.UpdateLastEditPositionPrice(priceRub, priceYuan)
 
 	updateDTO := dto.UpdateCustomerDTO{
@@ -173,21 +174,9 @@ func (h *handler) AddPosition(ctx context.Context, m *tg.Message) error {
 	return h.addPosition(ctx, m.Chat.ID)
 }
 
-func (h *handler) addPosition(ctx context.Context, telegramID int64) error {
-	chatID := telegramID
-	_, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
-	// if no such customer yet then create it
-	if err != nil {
-		if !errors.Is(err, domain.ErrCustomerNotFound) {
-			return err
-		}
-		// save to db
-		if err := h.customerRepo.Save(ctx, domain.NewCustomer(telegramID)); err != nil {
-			return err
-		}
-	}
+func (h *handler) addPosition(ctx context.Context, chatID int64) error {
 
-	if err := h.sendWithKeyboard(chatID, "Отправьте размер выбранного вами товара (шаг 1) 👍", bottomMenuWithouAddPositionButtons); err != nil {
+	if err := h.sendWithKeyboard(chatID, "Отправьте размер выбранного вами товара (шаг 1) 👍", bottomMenuWithoutAddPositionButtons); err != nil {
 		return err
 	}
 

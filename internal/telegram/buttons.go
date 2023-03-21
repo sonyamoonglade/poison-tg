@@ -32,18 +32,26 @@ const (
 	button95SelectCallback
 	addPositionCallback
 	editCartCallback
+	izhLocationCallback
+	spbLocationCallback
+	othLocationCallback
+	orderTypeNormalCallback
+	orderTypeExpressCallback
+	paymentCallback
 )
 
 const editCartRemovePositionOffset = 1000
 
 var (
-	initialMenuKeyboard                = initialBottomMenu()
-	menuButtons                        = menu()
-	selectColorButtons                 = selectButtonColor()
-	bottomMenuButtons                  = bottomMenu()
-	bottomMenuWithouAddPositionButtons = bottomMenuWithoutAddPosition()
-	cartPreviewButtons                 = cartPreview()
-	addPositionButtons                 = addPos()
+	initialMenuKeyboard                 = initialBottomMenu()
+	menuButtons                         = menu()
+	selectColorButtons                  = selectButtonColor()
+	bottomMenuButtons                   = bottomMenu()
+	bottomMenuWithoutAddPositionButtons = bottomMenuWithoutAddPosition()
+	cartPreviewButtons                  = cartPreview()
+	addPositionButtons                  = addPos()
+	locationButtons                     = location()
+	orderTypeButtons                    = orderType()
 )
 
 func injectMessageIDs(callback int, msgIDs ...int64) string {
@@ -211,4 +219,28 @@ func prepareEditCartButtons(n int, previewCartMsgID int) tg.InlineKeyboardMarkup
 	}
 
 	return tg.NewInlineKeyboardMarkup(keyboard...)
+}
+
+func location() tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Ижевск", strconv.Itoa(izhLocationCallback)),
+			tg.NewInlineKeyboardButtonData("Питер", strconv.Itoa(spbLocationCallback)),
+			tg.NewInlineKeyboardButtonData("Другой город", strconv.Itoa(othLocationCallback)),
+		))
+}
+
+func orderType() tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Экспресс", strconv.Itoa(orderTypeExpressCallback)),
+			tg.NewInlineKeyboardButtonData("Обычный", strconv.Itoa(orderTypeNormalCallback)),
+		))
+}
+
+func preparePaymentButton(requisitesMsgID int) tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Оплатил", injectMessageIDs(paymentCallback, int64(requisitesMsgID))),
+		))
 }

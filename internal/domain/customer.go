@@ -11,20 +11,42 @@ import (
 var (
 	// Default state not waiting for any make order response
 	StateDefault                      = State{0}
-	StateWaitingForSize               = State{1}
-	StateWaitingForButton             = State{2}
-	StateWaitingForPrice              = State{3}
-	StateWaitingForLink               = State{4}
-	StateWaitingForCartPositionToEdit = State{5}
-	StateWaitingForCalculatorInput    = State{6}
-	StateWaitingForFIO                = State{7}
-	StateWaitingForPhoneNumber        = State{8}
-	StateWaitingForDeliveryAddress    = State{9}
+	StateWaitingForOrderType          = State{1}
+	StateWaitingForLocation           = State{2}
+	StateWaitingForSize               = State{3}
+	StateWaitingForButton             = State{4}
+	StateWaitingForPrice              = State{5}
+	StateWaitingForLink               = State{6}
+	StateWaitingForCartPositionToEdit = State{7}
+	StateWaitingForCalculatorInput    = State{8}
+	StateWaitingForFIO                = State{9}
+	StateWaitingForPhoneNumber        = State{10}
+	StateWaitingForDeliveryAddress    = State{11}
 )
 
 var (
 	ErrCustomerNotFound = errors.New("customer not found")
 )
+
+type OrderType int
+
+const (
+	OrderTypeExpress OrderType = iota + 1
+	OrderTypeNormal
+)
+
+type Location int
+
+const (
+	LocationSPB Location = iota + 1
+	LocationIZH
+	LocationOther
+)
+
+type Meta struct {
+	NextOrderType *OrderType `json:"nextOrderType" bson:"nextOrderType"`
+	Location      *Location  `json:"location" bson:"location"`
+}
 
 type Customer struct {
 	CustomerID       primitive.ObjectID `json:"customerId" json:"customerID,omitempty" bson:"_id,omitempty"`
@@ -34,12 +56,14 @@ type Customer struct {
 	PhoneNumber      *string            `json:"phoneNumber,omitempty" bson:"phoneNumber,omitempty"`
 	TgState          State              `json:"state" bson:"state"`
 	Cart             Cart               `json:"cart" bson:"cart"`
+	Meta             Meta               `json:"meta" bson:"meta"`
 	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition"`
 }
 
-func NewCustomer(telegramID int64) Customer {
+func NewCustomer(telegramID int64, username string) Customer {
 	return Customer{
 		TelegramID: telegramID,
+		Username:   &username,
 		TgState:    StateDefault,
 	}
 }
@@ -71,6 +95,14 @@ func (c *Customer) UpdateLastEditPositionLink(link string) {
 
 func (c *Customer) UpdateLastEditPositionButtonColor(button Button) {
 	c.LastEditPosition.Button = button
+}
+
+func (c *Customer) UpdateMetaOrderType(typ OrderType) {
+	c.Meta.NextOrderType = &typ
+}
+
+func (c *Customer) UpdateMetaLocation(loc Location) {
+	c.Meta.Location = &loc
 }
 
 func MakeUsername(firstName string, lastName string, username string) string {

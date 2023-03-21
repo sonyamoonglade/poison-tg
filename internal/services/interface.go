@@ -6,11 +6,14 @@ import (
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 )
 
+type UseFormulaArguments struct {
+	Location  domain.Location
+	IsExpress bool
+}
+
 type Yuan interface {
-	GetYuanRate() (float64, error)
-	// ApplyFormula math.Ceil the value up
-	// Accepts price in yuan, returns price in rub
-	ApplyFormula(x_yuan uint64) (x_rub uint64, err error)
+	// ApplyFormula Accepts price in yuan, returns rounded to up price in rub
+	ApplyFormula(yuanAmount uint64, args UseFormulaArguments) (uint64, error)
 }
 
 type Order interface {
