@@ -85,12 +85,20 @@ type orderStartArgs struct {
 	fullName        string
 	shortOrderID    string
 	phoneNumber     string
+	isExpress       bool
 	deliveryAddress string
 	nCartItems      int
 }
 
 func getOrderStart(args orderStartArgs) string {
-	return fmt.Sprintf(t.OrderStart, args.fullName, args.shortOrderID, args.fullName, args.phoneNumber, args.deliveryAddress, args.nCartItems)
+	var expressStr string
+	if args.isExpress {
+		expressStr = "Экспресс"
+	} else {
+		expressStr = "Обычный"
+	}
+
+	return fmt.Sprintf(t.OrderStart, args.fullName, args.shortOrderID, expressStr, args.fullName, args.phoneNumber, args.deliveryAddress, args.nCartItems)
 }
 
 func getOrderEnd(amountRub uint64) string {
@@ -99,4 +107,22 @@ func getOrderEnd(amountRub uint64) string {
 
 func getRequisites(reqs domain.Requisites, shortOrderID string) string {
 	return fmt.Sprintf(t.Requisites, shortOrderID, reqs.SberID, reqs.TinkoffID, shortOrderID)
+}
+
+func extractShortOrderIDFromRequisites(text string) string {
+	var (
+		openIdx  int
+		closeIdx int
+	)
+	for i, ch := range text {
+		if ch == '[' {
+			openIdx = i
+			continue
+		}
+		if ch == ']' {
+			closeIdx = i
+			break
+		}
+	}
+	return text[openIdx+1 : closeIdx]
 }

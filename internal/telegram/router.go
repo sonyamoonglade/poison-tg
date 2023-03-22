@@ -56,6 +56,8 @@ type RouteHandler interface {
 	HandlePhoneNumberInput(ctx context.Context, m *tg.Message) error
 	HandleDeliveryAddressInput(ctx context.Context, m *tg.Message) error
 
+	HandlePayment(ctx context.Context, shortOrderID string, c *tg.CallbackQuery) error
+
 	HandleSizeInput(ctx context.Context, m *tg.Message) error
 	// use tg.CallbackQuery because callback is asosiated with c.User.ID, message is from bot
 	HandleButtonSelect(ctx context.Context, c *tg.CallbackQuery, button domain.Button) error
@@ -192,17 +194,21 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 	defer logger.Get().Debug("callback info",
 		zap.String("data", c.Data),
 		zap.Time("date", c.Message.Time()))
+
 	defer r.h.AnswerCallback(c.ID)
+
 	var (
 		chatID             = c.From.ID
 		msgID              = c.Message.MessageID
 		intCallbackData    int
 		callbackDataMsgIDs []int64
 	)
+
 	injectedMsgIDs, callback, err := parseCallbackData(c.Data)
 	if err != nil {
 		return fmt.Errorf("parseCallbackData: %w", err)
 	}
+
 	intCallbackData = callback
 	callbackDataMsgIDs = injectedMsgIDs
 
@@ -246,13 +252,17 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeNormal)
 	case orderTypeExpressCallback:
 		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeExpress)
+	case paymentCallback:
+		// todo
+		return r.h.HandlePayment(ctx, "", c)
 	default:
-		if intCallbackData < editCartRemovePositionOffset {
-			return ErrNoHandler
+		// Remove position callback
+		if intCallbackData >= editCartRemovePositionOffset {
+			// callbackDataMsgIDs[0] - id of preview cart message
+			return r.h.RemoveCartPosition(ctx, chatID, intCallbackData, int64(msgID), callbackDataMsgIDs[0])
 		}
-		// remove position callback
-		// callbackDataMsgIDs[0] - id of preview cart message
-		return r.h.RemoveCartPosition(ctx, chatID, intCallbackData, int64(msgID), callbackDataMsgIDs[0])
+
+		return ErrNoHandler
 	}
 }
 

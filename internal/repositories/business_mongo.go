@@ -23,9 +23,12 @@ func (b businessRepo) GetRequisites(ctx context.Context) (domain.Requisites, err
 	if err != nil {
 		return domain.Requisites{}, nil
 	}
+
 	var reqs domain.Requisites
-	if err := cur.Decode(&reqs); err != nil {
-		return domain.Requisites{}, nil
+	for cur.Next(ctx) {
+		if err := cur.Decode(&reqs); err != nil {
+			return domain.Requisites{}, nil
+		}
 	}
 
 	return reqs, nil

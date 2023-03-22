@@ -41,6 +41,9 @@ func (h *handler) Menu(ctx context.Context, chatID int64) error {
 }
 
 func (h *handler) Catalog(ctx context.Context, chatID int64) error {
+	r, err := h.businessRepo.GetRequisites(ctx)
+	_ = err
+	fmt.Println(r)
 	return h.cleanSend(tg.NewMessage(chatID, "catalog"))
 }
 

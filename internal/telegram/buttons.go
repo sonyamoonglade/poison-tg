@@ -66,7 +66,27 @@ func injectMessageIDs(callback int, msgIDs ...int64) string {
 	return msgIDstr + ":" + strconv.Itoa(callback)
 }
 
-func parseCallbackData(data string) ([]int64, int, error) {
+func injectStringData(callback int, str string) string {
+	return str + ":" + strconv.Itoa(callback)
+}
+
+func parseStringCallbackData(data string) (payload string, callback int, err error) {
+	var colonIdx int
+	for i, ch := range data {
+		if ch == ':' {
+			colonIdx = i
+			break
+		}
+	}
+	callback, err = strconv.Atoi(data[colonIdx+1:])
+	if err != nil {
+		return "", 0, err
+	}
+
+	return data[0:colonIdx], callback, nil
+}
+
+func parseCallbackData(data string) (msgIDs []int64, callback int, err error) {
 	if !strings.ContainsRune(data, ':') {
 		callback, err := strconv.Atoi(data)
 		if err != nil {

@@ -12,6 +12,17 @@ import (
 
 func (h *handler) AskForFIO(ctx context.Context, chatID int64) error {
 	var telegramID = chatID
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+	var (
+		isExpressOrder = *customer.Meta.NextOrderType == domain.OrderTypeExpress
+		cart           = customer.Cart
+	)
+	if isExpressOrder && len(cart) > 1 {
+		return h.cleanSend(tg.NewMessage(chatID, "Невозможно создать заказ с типом [Экспресс]\nКорзина должна состоять только из 1 элемента"))
+	}
 	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForFIO); err != nil {
 		return err
 	}
@@ -126,9 +137,7 @@ func (h *handler) HandleDeliveryAddressInput(ctx context.Context, m *tg.Message)
 
 	isExpress := *customer.Meta.NextOrderType == domain.OrderTypeExpress
 	order := domain.NewOrder(customer, address, isExpress, shortID)
-	if isExpress && len(order.Cart) > 1 {
-		return h.cleanSend(tg.NewMessage(chatID, "Невозможно создать заказ с типом [Экспресс]\nКорзина должна состоять только из 1 элемента"))
-	}
+
 	if err := h.orderRepo.Save(ctx, order); err != nil {
 		return err
 	}
@@ -145,6 +154,7 @@ func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Custo
 		fullName:        *customer.FullName,
 		shortOrderID:    order.ShortID,
 		phoneNumber:     *customer.PhoneNumber,
+		isExpress:       order.IsExpress,
 		deliveryAddress: order.DeliveryAddress,
 		nCartItems:      len(order.Cart),
 	})
@@ -188,4 +198,20 @@ func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Custo
 
 	editButton := tg.NewEditMessageReplyMarkup(chatID, sentRequisitesMsg.MessageID, preparePaymentButton(sentRequisitesMsg.MessageID))
 	return h.cleanSend(editButton)
+}
+
+func (h *handler) HandlePayment(ctx context.Context, shortOrderID string, c *tg.CallbackQuery) error {
+	var (
+	//chatID     = c.From.ID
+	//telegramID = chatID
+	)
+
+	//customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	//if err != nil {
+	//	return fmt.Errorf("customerRepo.GetByTelegramID: %w", err)
+	//}
+
+	//shortOrderID, err := extractShortOrderIDFromRequisites()
+	//panic(err)
+	return nil
 }
