@@ -10,11 +10,15 @@ import (
 )
 
 func (h *handler) askForOrderType(ctx context.Context, chatID int64) error {
-	return h.sendWithKeyboard(chatID, "Выберите тип заказа", orderTypeButtons)
+	text := "Shag 0. Выбери тип доставки (время экспресс перевозки в среднем составляет 4 дня из Китая в СПб, обычная перевозка составляет 8-15 дней)"
+	return h.sendWithKeyboard(chatID, text, orderTypeButtons)
 }
 
 func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error {
-	var telegramID = chatID
+	var (
+		telegramID = chatID
+		isExpress  = typ == domain.OrderTypeExpress
+	)
 
 	if err := h.checkRequiredState(ctx, domain.StateWaitingForOrderType, chatID); err != nil {
 		return err
@@ -25,25 +29,28 @@ func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ do
 		return err
 	}
 
+	var updateDTO dto.UpdateCustomerDTO
 	customer.UpdateMetaOrderType(typ)
-
-	updateDTO := dto.UpdateCustomerDTO{
-		Meta: &customer.Meta,
+	if isExpress {
+		// If order type is express then it's no matter which location user would put,
+		// so whatever
+		customer.UpdateMetaLocation(domain.LocationOther)
 	}
 
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
 		return err
 	}
-
-	switch typ {
-	case domain.OrderTypeExpress:
-		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Экспресс]"))
+	//todo: translate
+	var resp = "Тип заказа: "
+	switch isExpress {
+	case true:
+		resp += "Express"
 		break
-	case domain.OrderTypeNormal:
-		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Обычный]"))
+	case false:
+		resp += "Normal"
 		break
 	}
-	if err != nil {
+	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
 		return err
 	}
 
@@ -51,11 +58,16 @@ func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ do
 		return err
 	}
 
+	if isExpress {
+		return h.addPosition(ctx, chatID)
+	}
+
 	return h.askForLocation(ctx, chatID)
 }
 
 func (h *handler) askForLocation(ctx context.Context, chatID int64) error {
-	return h.sendWithKeyboard(chatID, "Откуда вы?", locationButtons)
+	text := "Из какого ты города?"
+	return h.sendWithKeyboard(chatID, text, locationButtons)
 }
 
 func (h *handler) HandleLocationInput(ctx context.Context, chatID int64, loc domain.Location) error {
@@ -79,19 +91,20 @@ func (h *handler) HandleLocationInput(ctx context.Context, chatID int64, loc dom
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
 		return err
 	}
-
+	var resp = "Выбран: "
 	switch loc {
 	case domain.LocationSPB:
-		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Из Питера]"))
+		resp += "SPB"
 		break
 	case domain.LocationIZH:
-		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Из Ижевска]"))
+		resp += "IZh"
 		break
 	case domain.LocationOther:
-		err = h.cleanSend(tg.NewMessage(chatID, "Вы выбрали тип [Из другого города]"))
+		resp += "other"
 		break
 	}
-	if err != nil {
+
+	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
 		return err
 	}
 

@@ -40,12 +40,15 @@ func (h *handler) HandleSizeInput(ctx context.Context, m *tg.Message) error {
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
-
-	if err := h.cleanSend(tg.NewMessage(chatID, "Thanks for size! Your size: "+sizeText)); err != nil {
+	if sizeText == "#" {
+		//todo: translate
+		sizeText = "NO size"
+	}
+	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Твой размер: %s", sizeText))); err != nil {
 		return err
 	}
-
-	return h.sendWithKeyboard(chatID, "Выберите цвет кнопки (шаг 2) 👍", selectColorButtons)
+	text := "Выбери цвет кнопки (влияет на условия доставки и цену в дальнейшем)"
+	return h.sendWithKeyboard(chatID, text, selectColorButtons)
 }
 
 func (h *handler) HandleButtonSelect(ctx context.Context, c *tg.CallbackQuery, button domain.Button) error {
@@ -72,10 +75,11 @@ func (h *handler) HandleButtonSelect(ctx context.Context, c *tg.CallbackQuery, b
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
-	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Спасибо! Вы выбрали цвет: %s!", string(button)))); err != nil {
+	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Цвет выбранной кнопки: %s", string(button)))); err != nil {
 		return err
 	}
-	return h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Отправьте прайс в юанях, соотвествующий кнопке [%s] (шаг 3) 👍", customer.LastEditPosition.Button)))
+	text := "Отправь стоимость товара в юанях (указана на выбранной кнопке"
+	return h.cleanSend(tg.NewMessage(chatID, text))
 }
 
 func (h *handler) HandlePriceInput(ctx context.Context, m *tg.Message) error {
@@ -118,11 +122,11 @@ func (h *handler) HandlePriceInput(ctx context.Context, m *tg.Message) error {
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("your price in rub: %d ₽", priceRub))); err != nil {
+	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Стоимость товара: %d ₽", priceRub))); err != nil {
 		return err
 	}
-
-	return h.cleanSend(tg.NewMessage(chatID, "Отправьте ссылку на выбранный товар (шаг 4) 👍"))
+	text := "Отправь ссылку на выбранный товар (строго по инструкции)"
+	return h.cleanSend(tg.NewMessage(chatID, text))
 }
 
 func (h *handler) HandleLinkInput(ctx context.Context, m *tg.Message) error {
@@ -161,7 +165,7 @@ func (h *handler) HandleLinkInput(ctx context.Context, m *tg.Message) error {
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Ссылка [%s] принята!", link))); err != nil {
+	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Товар по ссылке: %s", link))); err != nil {
 		return err
 	}
 
@@ -175,8 +179,8 @@ func (h *handler) AddPosition(ctx context.Context, m *tg.Message) error {
 }
 
 func (h *handler) addPosition(ctx context.Context, chatID int64) error {
-
-	if err := h.sendWithKeyboard(chatID, "Отправьте размер выбранного вами товара (шаг 1) 👍", bottomMenuWithoutAddPositionButtons); err != nil {
+	text := "Шаг 1. Выбери размер (будь внимателен)"
+	if err := h.sendWithKeyboard(chatID, text, bottomMenuWithoutAddPositionButtons); err != nil {
 		return err
 	}
 

@@ -64,6 +64,8 @@ type RouteHandler interface {
 	HandlePriceInput(ctx context.Context, m *tg.Message) error
 	HandleLinkInput(ctx context.Context, m *tg.Message) error
 
+	// Catalog manupulations
+
 	// Utils
 	HandleError(ctx context.Context, err error, m tg.Update)
 	AnswerCallback(callbackID string) error

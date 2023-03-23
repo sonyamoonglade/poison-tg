@@ -57,6 +57,7 @@ type Customer struct {
 	TgState          State              `json:"state" bson:"state"`
 	Cart             Cart               `json:"cart" bson:"cart"`
 	Meta             Meta               `json:"meta" bson:"meta"`
+	CatalogOffset    int                `json:"catalogOffset" bson:"catalogOffset"`
 	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition"`
 }
 
@@ -103,6 +104,14 @@ func (c *Customer) UpdateMetaOrderType(typ OrderType) {
 
 func (c *Customer) UpdateMetaLocation(loc Location) {
 	c.Meta.Location = &loc
+}
+
+func (c *Customer) IncrementCatalogOffset() {
+	c.CatalogOffset++
+}
+
+func (c *Customer) NullifyCatalogOffset() {
+	c.CatalogOffset = 0
 }
 
 func MakeUsername(firstName string, lastName string, username string) string {
