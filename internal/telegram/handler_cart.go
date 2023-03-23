@@ -20,8 +20,8 @@ func (h *handler) GetCart(ctx context.Context, chatID int64) error {
 	if len(customer.Cart) == 0 {
 		return h.emptyCart(chatID)
 	}
-
-	msg := tg.NewMessage(chatID, h.prepareCartPreview(customer.Cart))
+	isExpressOrder := *customer.Meta.NextOrderType == domain.OrderTypeExpress
+	msg := tg.NewMessage(chatID, h.prepareCartPreview(customer.Cart, isExpressOrder))
 	msg.ReplyMarkup = cartPreviewButtons
 
 	return h.cleanSend(msg)
@@ -96,7 +96,9 @@ func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callback
 
 	// edit original preview cart message and edit buttons
 	buttonsForNewCart := prepareEditCartButtons(len(customer.Cart), int(cartPreviewMsgID))
-	textForNewCart := h.prepareCartPreview(customer.Cart)
+
+	isExpressOrder := *customer.Meta.NextOrderType == domain.OrderTypeExpress
+	textForNewCart := h.prepareCartPreview(customer.Cart, isExpressOrder)
 
 	updatePreviewText := tg.NewEditMessageText(chatID, int(cartPreviewMsgID), textForNewCart)
 	updatePreviewText.ReplyMarkup = &cartPreviewButtons
@@ -117,8 +119,8 @@ func (h *handler) emptyCart(chatID int64) error {
 	return h.sendWithKeyboard(chatID, "Ваша корзина пуста!", addPositionButtons)
 }
 
-func (h *handler) prepareCartPreview(cart domain.Cart) string {
-	var out = getCartPreviewStartTemplate(len(cart))
+func (h *handler) prepareCartPreview(cart domain.Cart, isExpressOrder bool) string {
+	var out = getCartPreviewStartTemplate(len(cart), isExpressOrder)
 	var totalRub uint64
 	var totalYuan uint64
 	for n, cartItem := range cart {

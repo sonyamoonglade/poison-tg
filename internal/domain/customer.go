@@ -57,7 +57,7 @@ type Customer struct {
 	TgState          State              `json:"state" bson:"state"`
 	Cart             Cart               `json:"cart" bson:"cart"`
 	Meta             Meta               `json:"meta" bson:"meta"`
-	CatalogOffset    int                `json:"catalogOffset" bson:"catalogOffset"`
+	CatalogOffset    uint               `json:"catalogOffset" bson:"catalogOffset"`
 	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition"`
 }
 

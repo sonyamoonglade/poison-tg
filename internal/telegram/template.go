@@ -15,6 +15,7 @@ var t = new(templates)
 type templates struct {
 	Menu                string `json:"menu,omitempty"`
 	Start               string `json:"start,omitempty"`
+	Catalog             string `json:"catalog,omitempty"`
 	CartPreviewStartFMT string `json:"cartPreviewStart,omitempty"`
 	CartPreviewEndFMT   string `json:"cartPreviewEnd,omitempty"`
 	CartPositionFMT     string `json:"cartPosition,omitempty"`
@@ -55,8 +56,14 @@ func LoadTemplates(path string) error {
 	return nil
 }
 
-func getCartPreviewStartTemplate(numPositions int) string {
-	return fmt.Sprintf(t.CartPreviewStartFMT, numPositions)
+func getCartPreviewStartTemplate(numPositions int, isExpress bool) string {
+	var orderTypeText string
+	if isExpress {
+		orderTypeText = "Экспресс"
+	} else {
+		orderTypeText = "Обычный"
+	}
+	return fmt.Sprintf(t.CartPreviewStartFMT, numPositions, orderTypeText)
 }
 
 type cartPositionPreviewArgs struct {
@@ -125,4 +132,8 @@ func extractShortOrderIDFromRequisites(text string) string {
 		}
 	}
 	return text[openIdx+1 : closeIdx]
+}
+
+func getCatalog(username string) string {
+	return fmt.Sprintf(t.Catalog, username)
 }

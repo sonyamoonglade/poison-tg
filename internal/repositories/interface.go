@@ -25,3 +25,12 @@ type Order interface {
 type Business interface {
 	GetRequisites(ctx context.Context) (domain.Requisites, error)
 }
+
+type Catalog interface {
+	// When catalog is going to be inserted this function is going to be executed
+	OnChange(func(newItems []domain.CatalogItem))
+	GetCatalog(ctx context.Context) ([]domain.CatalogItem, error)
+	AddItem(ctx context.Context, item domain.CatalogItem) error
+	RemoveItem(ctx context.Context, itemID primitive.ObjectID) error
+	UpdateRanks(ctx context.Context, dto dto.UpdateItemDTO) error
+}

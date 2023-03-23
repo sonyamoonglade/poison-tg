@@ -40,7 +40,15 @@ const (
 	paymentCallback
 )
 
-const editCartRemovePositionOffset = 1000
+const (
+	editCartRemovePositionOffset = 1000
+	catalogOffset                = 1200
+)
+
+const (
+	catalogPrevCallback = iota + 1
+	catalogNextCallback
+)
 
 var (
 	initialMenuKeyboard                 = initialBottomMenu()
@@ -262,5 +270,32 @@ func preparePaymentButton(requisitesMsgID int) tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Оплатил", injectMessageIDs(paymentCallback, int64(requisitesMsgID))),
+		))
+}
+
+type catalogButtonsArgs struct {
+	hasNext, hasPrev     bool
+	nextTitle, prevTitle string
+	msgIDs               []int64
+}
+
+func prepareCatalogButtons(args catalogButtonsArgs) tg.InlineKeyboardMarkup {
+	if args.hasNext && args.hasPrev {
+		return tg.NewInlineKeyboardMarkup(
+			tg.NewInlineKeyboardRow(
+				tg.NewInlineKeyboardButtonData("< "+args.prevTitle, injectMessageIDs(catalogOffset+catalogPrevCallback, args.msgIDs...)),
+				tg.NewInlineKeyboardButtonData(args.nextTitle+" >", injectMessageIDs(catalogOffset+catalogNextCallback, args.msgIDs...)),
+			))
+	} else if args.hasNext {
+		return tg.NewInlineKeyboardMarkup(
+			tg.NewInlineKeyboardRow(
+				tg.NewInlineKeyboardButtonData(args.nextTitle+" >", injectMessageIDs(catalogOffset+catalogNextCallback, args.msgIDs...)),
+			))
+	}
+
+	// only prev
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("< "+args.prevTitle, injectMessageIDs(catalogOffset+catalogPrevCallback, args.msgIDs...)),
 		))
 }

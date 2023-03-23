@@ -8,6 +8,7 @@ import (
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
+	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 )
 
 func (h *handler) Start(ctx context.Context, m *tg.Message) error {
@@ -41,10 +42,68 @@ func (h *handler) Menu(ctx context.Context, chatID int64) error {
 }
 
 func (h *handler) Catalog(ctx context.Context, chatID int64) error {
-	r, err := h.businessRepo.GetRequisites(ctx)
-	_ = err
-	fmt.Println(r)
-	return h.cleanSend(tg.NewMessage(chatID, "catalog"))
+	var (
+		telegramID = chatID
+		first      bool
+	)
+
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+
+	if err := h.cleanSend(tg.NewMessage(chatID, getCatalog(*customer.Username))); err != nil {
+		return err
+	}
+
+	// Load appropriate item
+	item := h.catalogProvider.LoadAt(customer.CatalogOffset)
+
+	thumbnails := functools.Map(func(url string) interface{} {
+		thumbnail := tg.NewInputMediaPhoto(tg.FileURL(url))
+		if !first {
+			// add caption to first element
+			thumbnail.Caption = item.GetCaption()
+			first = true
+		}
+		return thumbnail
+	}, item.ImageURLs)
+
+	group := tg.NewMediaGroup(chatID, thumbnails)
+
+	// Sends thumnails with caption
+	sentMsgs, err := h.b.client.SendMediaGroup(group)
+	if err != nil {
+		return err
+	}
+
+	msgIDs := functools.Map(func(m tg.Message) int64 {
+		return int64(m.MessageID)
+	}, sentMsgs)
+
+	// Prepare buttons for controlling prev, next
+	var (
+		currentOffset = customer.CatalogOffset
+		hasNext       = h.catalogProvider.HasNext(currentOffset)
+		hasPrev       = h.catalogProvider.HasPrev(currentOffset)
+	)
+
+	btnArgs := catalogButtonsArgs{
+		hasNext: hasNext,
+		hasPrev: hasPrev,
+		msgIDs:  msgIDs,
+	}
+
+	if hasNext {
+		next := h.catalogProvider.LoadNext(currentOffset)
+		btnArgs.nextTitle = next.Title
+	} else if hasPrev {
+		prev := h.catalogProvider.LoadPrev(currentOffset)
+		btnArgs.prevTitle = prev.Title
+	}
+
+	buttons := prepareCatalogButtons(btnArgs)
+	return h.sendWithKeyboard(chatID, "Кнопки для пролистывания каталога", buttons)
 }
 
 func (h *handler) Calculator(ctx context.Context, chatID int64) error {

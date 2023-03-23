@@ -62,6 +62,9 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 			update["meta.nextOrderType"] = dto.Meta.NextOrderType
 		}
 	}
+	if dto.CatalogOffset != nil {
+		update["catalogOffset"] = *dto.CatalogOffset
+	}
 
 	_, err := c.customers.UpdateByID(ctx, customerID, bson.M{"$set": update})
 	if err != nil {

@@ -12,17 +12,7 @@ import (
 
 func (h *handler) AskForFIO(ctx context.Context, chatID int64) error {
 	var telegramID = chatID
-	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
-	if err != nil {
-		return err
-	}
-	var (
-		isExpressOrder = *customer.Meta.NextOrderType == domain.OrderTypeExpress
-		cart           = customer.Cart
-	)
-	if isExpressOrder && len(cart) > 1 {
-		return h.cleanSend(tg.NewMessage(chatID, "Невозможно создать заказ с типом [Экспресс]\nКорзина должна состоять только из 1 элемента"))
-	}
+
 	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForFIO); err != nil {
 		return err
 	}
@@ -201,17 +191,18 @@ func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Custo
 }
 
 func (h *handler) HandlePayment(ctx context.Context, shortOrderID string, c *tg.CallbackQuery) error {
-	var (
-	//chatID     = c.From.ID
-	//telegramID = chatID
-	)
-
-	//customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
-	//if err != nil {
-	//	return fmt.Errorf("customerRepo.GetByTelegramID: %w", err)
-	//}
-
-	//shortOrderID, err := extractShortOrderIDFromRequisites()
-	//panic(err)
 	return nil
+	// var (
+	// 	chatID     = c.From.ID
+	// 	telegramID = chatID
+	// )
+
+	// customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	// if err != nil {
+	// 	return fmt.Errorf("customerRepo.GetByTelegramID: %w", err)
+	// }
+
+	// shortOrderID := extractShortOrderIDFromRequisites()
+	// panic(err)
+	// return nil
 }

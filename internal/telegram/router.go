@@ -51,20 +51,21 @@ type RouteHandler interface {
 	MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
 
 	AskForFIO(ctx context.Context, chatID int64) error
-	// use tg.Message because user types in and userID is user's
+	// Use tg.Message because user types in and userID is user's
 	HandleFIOInput(ctx context.Context, m *tg.Message) error
 	HandlePhoneNumberInput(ctx context.Context, m *tg.Message) error
 	HandleDeliveryAddressInput(ctx context.Context, m *tg.Message) error
-
 	HandlePayment(ctx context.Context, shortOrderID string, c *tg.CallbackQuery) error
 
 	HandleSizeInput(ctx context.Context, m *tg.Message) error
-	// use tg.CallbackQuery because callback is asosiated with c.User.ID, message is from bot
+	// Use tg.CallbackQuery because callback is asosiated with c.User.ID, message is from bot
 	HandleButtonSelect(ctx context.Context, c *tg.CallbackQuery, button domain.Button) error
 	HandlePriceInput(ctx context.Context, m *tg.Message) error
 	HandleLinkInput(ctx context.Context, m *tg.Message) error
 
 	// Catalog manupulations
+	HandleCatalogNext(ctx context.Context, chatID int64, controlButtonsMessageID int64, thumnailMsgIDs []int64) error
+	HandleCatalogPrev(ctx context.Context, chatID int64, controlButtonsMessageID int64, thumnailMsgIDs []int64) error
 
 	// Utils
 	HandleError(ctx context.Context, err error, m tg.Update)
@@ -91,16 +92,17 @@ func NewRouter(updates <-chan tg.Update, h RouteHandler, stateProvider StateProv
 	}
 }
 
-func (r *Router) Bootstrap() {
+// Cosmetic error return
+func (r *Router) Bootstrap() error {
 	logger.Get().Info("router is listening for updates")
 	for {
 		select {
 		case <-r.shutdown:
 			logger.Get().Info("router is shutting down")
-			return
+			return nil
 		case update, ok := <-r.updates:
 			if !ok {
-				return
+				return nil
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), r.handlerTimeout)
@@ -259,9 +261,18 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return r.h.HandlePayment(ctx, "", c)
 	default:
 		// Remove position callback
-		if intCallbackData >= editCartRemovePositionOffset {
+		if intCallbackData >= editCartRemovePositionOffset && intCallbackData < catalogOffset {
 			// callbackDataMsgIDs[0] - id of preview cart message
 			return r.h.RemoveCartPosition(ctx, chatID, intCallbackData, int64(msgID), callbackDataMsgIDs[0])
+		}
+		// Prev or next callback
+		if intCallbackData >= catalogOffset {
+			switch intCallbackData - catalogOffset {
+			case catalogNextCallback:
+				return r.h.HandleCatalogNext(ctx, chatID, int64(msgID), callbackDataMsgIDs)
+			case catalogPrevCallback:
+				return r.h.HandleCatalogPrev(ctx, chatID, int64(msgID), callbackDataMsgIDs)
+			}
 		}
 
 		return ErrNoHandler
