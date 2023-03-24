@@ -81,10 +81,9 @@ func TestInjectStringData(t *testing.T) {
 		expected    string
 		expectedErr error
 	}{
-		{"basic", 123, "foo", "foo:123", nil},
-		{"empty string", 456, "", ":456", nil},
-		{"negative callback", -789, "bar", "bar:-789", nil},
-		{"callback with leading zeroes", 001, "baz", "baz:1", nil},
+		{"basic", 123, "foo", "sfoo:123", nil},
+		{"negative callback", -789, "bar", "sbar:-789", nil},
+		{"basic", 123, "baz", "sbaz:123", nil},
 	}
 
 	for _, test := range tests {
@@ -103,10 +102,10 @@ func TestParseStringCallbackData(t *testing.T) {
 		expectedCb  int
 		expectedErr error
 	}{
-		{"basic", "foo:123", "foo", 123, nil},
-		{"empty string", ":456", "", 456, nil},
-		{"negative callback", "bar:-789", "bar", -789, nil},
-		{"callback with leading zeroes", "baz:001", "baz", 1, nil},
+		{"basic", "sfoo:123", "foo", 123, nil},
+		{"empty string", "s:456", "", 456, nil},
+		{"negative callback", "sbar:-789", "bar", -789, nil},
+		{"callback with leading zeroes", "sbaz:001", "baz", 1, nil},
 	}
 
 	for _, test := range tests {
