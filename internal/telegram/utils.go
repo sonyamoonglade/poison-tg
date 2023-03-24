@@ -6,6 +6,7 @@ import (
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
+	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 )
 
 func (h *handler) sendWithKeyboard(chatID int64, text string, keyboard interface{}) error {
@@ -28,4 +29,29 @@ func (h *handler) checkRequiredState(ctx context.Context, want domain.State, tel
 		return ErrInvalidState
 	}
 	return nil
+}
+
+func (h *handler) deleteUnusedMedia(offset int, chatID int64, msgIDs []int) error {
+	// Delete the rest of medias
+	for i := offset; i < len(msgIDs); i++ {
+		del := tg.NewDeleteMessage(chatID, msgIDs[i])
+		_, err := h.b.client.Request(del)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func makeThumbnails(caption string, urls ...string) []interface{} {
+	var first bool
+	return functools.Map(func(url string) interface{} {
+		thumbnail := tg.NewInputMediaPhoto(tg.FileURL(url))
+		if !first {
+			// add caption to first element
+			thumbnail.Caption = caption
+			first = true
+		}
+		return thumbnail
+	}, urls)
 }

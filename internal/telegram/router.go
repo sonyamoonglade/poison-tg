@@ -27,13 +27,16 @@ type RouteHandler interface {
 	Start(ctx context.Context, m *tg.Message) error
 	Menu(ctx context.Context, chatID int64) error
 	Catalog(ctx context.Context, chatID int64) error
-	Calculator(ctx context.Context, chatID int64) error
+	MyOrders(ctx context.Context, chatID int64) error
 
+	AskForCalculatorOrderType(ctx context.Context, chatID int64) error
+	HandleCalculatorOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error
+	HandleCalculatorLocationInput(ctx context.Context, chatID int64, loc domain.Location) error
 	HandleCalculatorInput(ctx context.Context, m *tg.Message) error
 
 	GetCart(ctx context.Context, chatID int64) error
 	EditCart(ctx context.Context, chatID int64, cartPreviewMsgID int) error
-	RemoveCartPosition(ctx context.Context, chatID int64, callbackData int, originalMsgID, cartPreviewMsgID int64) error
+	RemoveCartPosition(ctx context.Context, chatID int64, callbackData int, originalMsgID, cartPreviewMsgID int) error
 
 	// Add position is like StartmakeOrderGuide but without instruction
 	AddPosition(ctx context.Context, m *tg.Message) error
@@ -43,12 +46,13 @@ type RouteHandler interface {
 
 	// StartMakeOrderGuide is initial guide handler
 	StartMakeOrderGuide(ctx context.Context, m *tg.Message) error
-	// MakeOrderGuideStep1
-	// Can go to step 1 handler only from going backwards from step 2
-	MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
-	MakeOrderGuideStep2(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
-	MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
-	MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error
+
+	MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error
+	MakeOrderGuideStep2(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error
+	MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error
+	MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error
+	MakeOrderGuideStep5(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error
+	MakeOrderGuideStep6(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error
 
 	AskForFIO(ctx context.Context, chatID int64) error
 	// Use tg.Message because user types in and userID is user's
@@ -64,8 +68,8 @@ type RouteHandler interface {
 	HandleLinkInput(ctx context.Context, m *tg.Message) error
 
 	// Catalog manupulations
-	HandleCatalogNext(ctx context.Context, chatID int64, controlButtonsMessageID int64, thumnailMsgIDs []int64) error
-	HandleCatalogPrev(ctx context.Context, chatID int64, controlButtonsMessageID int64, thumnailMsgIDs []int64) error
+	HandleCatalogNext(ctx context.Context, chatID int64, controlButtonsMessageID int64, thumnailMsgIDs []int) error
+	HandleCatalogPrev(ctx context.Context, chatID int64, controlButtonsMessageID int64, thumnailMsgIDs []int) error
 
 	// Utils
 	HandleError(ctx context.Context, err error, m tg.Update)
@@ -174,10 +178,6 @@ func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 			return r.h.HandlePriceInput(ctx, m)
 		case domain.StateWaitingForLink:
 			return r.h.HandleLinkInput(ctx, m)
-			// It's here for consistency. It's not needed.
-			// Users don't send messages in this state, they click buttons.
-		case domain.StateWaitingForCartPositionToEdit:
-			return nil
 		case domain.StateWaitingForCalculatorInput:
 			return r.h.HandleCalculatorInput(ctx, m)
 		case domain.StateWaitingForFIO:
@@ -205,30 +205,44 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		chatID             = c.From.ID
 		msgID              = c.Message.MessageID
 		intCallbackData    int
-		callbackDataMsgIDs []int64
+		callbackDataMsgIDs []int
+		stringData         string
 	)
 
-	injectedMsgIDs, callback, err := parseCallbackData(c.Data)
+	out, callback, err := parseCallbackData(c.Data)
 	if err != nil {
 		return fmt.Errorf("parseCallbackData: %w", err)
 	}
 
 	intCallbackData = callback
-	callbackDataMsgIDs = injectedMsgIDs
+
+	switch v := out.(type) {
+	case []int:
+		callbackDataMsgIDs = v
+	case string:
+		stringData = v
+	}
 
 	switch intCallbackData {
+	case mockCallback:
+		// Do not do anything
+		return nil
 	case menuMakeOrderCallback:
 		return r.h.StartMakeOrderGuide(ctx, c.Message)
 	case menuCalculatorCallback:
-		return r.h.Calculator(ctx, chatID)
+		return r.h.AskForCalculatorOrderType(ctx, chatID)
+	case orderGuideStep0Callback:
+		return r.h.MakeOrderGuideStep1(ctx, chatID, msgID, callbackDataMsgIDs)
 	case orderGuideStep1Callback:
-		return r.h.MakeOrderGuideStep1(ctx, chatID, msgID, callbackDataMsgIDs...)
+		return r.h.MakeOrderGuideStep2(ctx, chatID, msgID, callbackDataMsgIDs)
 	case orderGuideStep2Callback:
-		return r.h.MakeOrderGuideStep2(ctx, chatID, msgID, callbackDataMsgIDs...)
+		return r.h.MakeOrderGuideStep3(ctx, chatID, msgID, callbackDataMsgIDs)
 	case orderGuideStep3Callback:
-		return r.h.MakeOrderGuideStep3(ctx, chatID, msgID, callbackDataMsgIDs...)
+		return r.h.MakeOrderGuideStep4(ctx, chatID, msgID, callbackDataMsgIDs)
 	case orderGuideStep4Callback:
-		return r.h.MakeOrderGuideStep4(ctx, chatID, msgID, callbackDataMsgIDs...)
+		return r.h.MakeOrderGuideStep5(ctx, chatID, msgID, callbackDataMsgIDs)
+	case orderGuideStep5Callback:
+		return r.h.MakeOrderGuideStep6(ctx, chatID, msgID, callbackDataMsgIDs)
 	case makeOrderCallback:
 		return r.h.AskForFIO(ctx, chatID)
 	case menuTrackOrderCallback:
@@ -236,6 +250,8 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return nil
 	case menuCatalogCallback:
 		return r.h.Catalog(ctx, chatID)
+	case myOrdersCallback:
+		return r.h.MyOrders(ctx, chatID)
 	case buttonTorqoiseSelectCallback:
 		return r.h.HandleButtonSelect(ctx, c, domain.ButtonTorqoise)
 	case buttonGreySelectCallback:
@@ -248,22 +264,32 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return r.h.AddPosition(ctx, c.Message)
 	case izhLocationCallback:
 		return r.h.HandleLocationInput(ctx, chatID, domain.LocationIZH)
+	case izhLocationCalculatorCallback:
+		return r.h.HandleCalculatorLocationInput(ctx, chatID, domain.LocationIZH)
 	case spbLocationCallback:
 		return r.h.HandleLocationInput(ctx, chatID, domain.LocationSPB)
+	case spbLocationCalculatorCallback:
+		return r.h.HandleCalculatorLocationInput(ctx, chatID, domain.LocationSPB)
 	case othLocationCallback:
 		return r.h.HandleLocationInput(ctx, chatID, domain.LocationOther)
+	case othLocationCalculatorCallback:
+		return r.h.HandleCalculatorLocationInput(ctx, chatID, domain.LocationOther)
 	case orderTypeNormalCallback:
 		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeNormal)
+	case orderTypeNormalCalculatorCallback:
+		return r.h.HandleCalculatorOrderTypeInput(ctx, chatID, domain.OrderTypeNormal)
 	case orderTypeExpressCallback:
 		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeExpress)
+	case orderTypeExpressCalculatorCallback:
+		return r.h.HandleCalculatorOrderTypeInput(ctx, chatID, domain.OrderTypeExpress)
 	case paymentCallback:
-		// todo
-		return r.h.HandlePayment(ctx, "", c)
+		// stringData in this case is orderShortID
+		return r.h.HandlePayment(ctx, stringData, c)
 	default:
 		// Remove position callback
 		if intCallbackData >= editCartRemovePositionOffset && intCallbackData < catalogOffset {
 			// callbackDataMsgIDs[0] - id of preview cart message
-			return r.h.RemoveCartPosition(ctx, chatID, intCallbackData, int64(msgID), callbackDataMsgIDs[0])
+			return r.h.RemoveCartPosition(ctx, chatID, intCallbackData, msgID, callbackDataMsgIDs[0])
 		}
 		// Prev or next callback
 		if intCallbackData >= catalogOffset {

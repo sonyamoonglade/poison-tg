@@ -62,6 +62,15 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 			update["meta.nextOrderType"] = dto.Meta.NextOrderType
 		}
 	}
+	if dto.CalculatorMeta != nil {
+		if dto.CalculatorMeta.Location != nil {
+			update["calculatorMeta.location"] = dto.CalculatorMeta.Location
+		}
+		if dto.CalculatorMeta.NextOrderType != nil {
+			update["calculatorMeta.nextOrderType"] = dto.CalculatorMeta.NextOrderType
+		}
+	}
+
 	if dto.CatalogOffset != nil {
 		update["catalogOffset"] = *dto.CatalogOffset
 	}

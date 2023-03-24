@@ -77,8 +77,8 @@ func (h *handler) Catalog(ctx context.Context, chatID int64) error {
 		return err
 	}
 
-	msgIDs := functools.Map(func(m tg.Message) int64 {
-		return int64(m.MessageID)
+	msgIDs := functools.Map(func(m tg.Message) int {
+		return m.MessageID
 	}, sentMsgs)
 
 	// Prepare buttons for controlling prev, next
@@ -123,4 +123,54 @@ func (h *handler) Calculator(ctx context.Context, chatID int64) error {
 	}
 
 	return h.cleanSend(tg.NewMessage(chatID, "Отправь мне цену товара в юанях, а я скажу сколько это будет стоить в переводе на рубли для тебя"))
+}
+
+func (h *handler) MyOrders(ctx context.Context, chatID int64) error {
+	var telegramID = chatID
+
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+
+	orders, err := h.orderRepo.GetAll(ctx, customer.CustomerID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNoOrders) {
+			return h.cleanSend(tg.NewMessage(chatID, "У вас пока нет заказов"))
+		}
+
+		return err
+	}
+	var name string
+	if customer.FullName != nil {
+		name = *customer.FullName
+	} else {
+		name = *customer.Username
+	}
+	out := getMyOrdersStart(name)
+	for _, o := range orders {
+		out += getSingleOrderPreview(singleOrderArgs{
+			shortID:         o.ShortID,
+			isExpress:       o.IsExpress,
+			isPaid:          o.IsPaid,
+			isApproved:      o.IsApproved,
+			cartLen:         len(o.Cart),
+			deliveryAddress: o.DeliveryAddress,
+			totalYuan:       o.AmountYUAN,
+			totalRub:        o.AmountRUB,
+		})
+		for nCartItem, cartItem := range o.Cart {
+			out += getPositionTemplate(cartPositionPreviewArgs{
+				n:         nCartItem + 1,
+				link:      cartItem.ShopLink,
+				size:      cartItem.Size,
+				priceRub:  cartItem.PriceRUB,
+				priceYuan: cartItem.PriceYUAN,
+			})
+		}
+
+		out += getTemplate().MyOrdersEnd
+	}
+
+	return h.cleanSend(tg.NewMessage(chatID, out))
 }

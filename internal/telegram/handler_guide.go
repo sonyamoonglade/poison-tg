@@ -10,7 +10,7 @@ import (
 )
 
 func (h *handler) askForOrderType(ctx context.Context, chatID int64) error {
-	text := "Shag 0. Выбери тип доставки (время экспресс перевозки в среднем составляет 4 дня из Китая в СПб, обычная перевозка составляет 8-15 дней)"
+	text := "Выбери тип доставки (время экспресс перевозки в среднем составляет 4 дня из Китая в СПб, обычная перевозка составляет 8-15 дней)"
 	return h.sendWithKeyboard(chatID, text, orderTypeButtons)
 }
 
@@ -29,32 +29,39 @@ func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ do
 		return err
 	}
 
-	var updateDTO dto.UpdateCustomerDTO
 	customer.UpdateMetaOrderType(typ)
 	if isExpress {
 		// If order type is express then it's no matter which location user would put,
 		// so whatever
 		customer.UpdateMetaLocation(domain.LocationOther)
+		// skip location state
+		customer.TgState = domain.StateWaitingForSize
+	} else {
+		customer.TgState = domain.StateWaitingForLocation
+	}
+
+	updateDTO := dto.UpdateCustomerDTO{
+		Meta: &domain.Meta{
+			NextOrderType: customer.Meta.NextOrderType,
+			Location:      customer.Meta.Location,
+		},
+		State: &customer.TgState,
 	}
 
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
 		return err
 	}
-	//todo: translate
+
 	var resp = "Тип заказа: "
 	switch isExpress {
 	case true:
-		resp += "Express"
+		resp += "Экспресс"
 		break
 	case false:
-		resp += "Normal"
+		resp += "Обычный"
 		break
 	}
 	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
-		return err
-	}
-
-	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForLocation); err != nil {
 		return err
 	}
 
@@ -94,13 +101,13 @@ func (h *handler) HandleLocationInput(ctx context.Context, chatID int64, loc dom
 	var resp = "Выбран: "
 	switch loc {
 	case domain.LocationSPB:
-		resp += "SPB"
+		resp += "Питер"
 		break
 	case domain.LocationIZH:
-		resp += "IZh"
+		resp += "Ижевск"
 		break
 	case domain.LocationOther:
-		resp += "other"
+		resp += "Другой"
 		break
 	}
 
@@ -117,23 +124,19 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 		telegramID = chatID
 	)
 
-	url := "https://picsum.photos/300/300"
-	image := tg.NewInputMediaPhoto(tg.FileURL(url))
-	image.Caption = "У меня есть желание привезти лишь то,что нужно, поэтому, (имя юзера), предупреждаю, китайцы уже позаботились о нас и предоставили к каждому размерному товару - размерную сетку разных стран, тебе лишь нужно выбрать подходящий размер. Не ошибись с выбором, Стрелок  🤠 Поехали?"
-	group := tg.NewMediaGroup(chatID, []interface{}{
-		image,
-		tg.NewInputMediaPhoto(tg.FileURL(url)),
-	})
+	thumbnails := makeThumbnails(getTemplate().GuideStep1, guideStep1Thumbnail1, guideStep1Thumbnail2)
+	group := tg.NewMediaGroup(chatID, thumbnails)
+
 	sentMsgs, err := h.b.client.SendMediaGroup(group)
 	if err != nil {
 		return err
 	}
 
-	msgIDs := functools.Map(func(m tg.Message) int64 {
-		return int64(m.MessageID)
+	msgIDs := functools.Map(func(m tg.Message) int {
+		return m.MessageID
 	}, sentMsgs)
 
-	buttons := prepareOrderGuideButtons(orderGuideStep1Callback, msgIDs...)
+	buttons := prepareOrderGuideButtons(orderGuideStep0Callback, msgIDs...)
 	if err := h.sendWithKeyboard(chatID, "Кнопки для пролистывания инструкции", buttons); err != nil {
 		return err
 	}
@@ -143,6 +146,7 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 		return err
 	}
 
+	// If cart is not empty then skip location and order type ask
 	if len(customer.Cart) > 0 {
 		return h.addPosition(ctx, chatID)
 	}
@@ -154,102 +158,52 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 	return h.askForOrderType(ctx, chatID)
 }
 
-func (h *handler) MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
-	// update content
-	for i, imID := range instructionMsgIDs {
-		url := "https://picsum.photos/300/301"
-		image := tg.NewInputMediaPhoto(tg.FileURL(url))
-		// update Caption only on first element on order to show text (see telegram docs)
-		if i == 0 {
-			image.Caption = "У меня есть желание привезти лишь то,что нужно, поэтому, (имя юзера), предупреждаю, китайцы уже позаботились о нас и предоставили к каждому размерному товару - размерную сетку разных стран, тебе лишь нужно выбрать подходящий размер. Не ошибись с выбором, Стрелок  🤠 Поехали?"
-		}
-		editOneMedia := &tg.EditMessageMediaConfig{
-			BaseEdit: tg.BaseEdit{
-				ChatID:    chatID,
-				MessageID: int(imID),
-			},
-			Media: image,
-		}
-		if err := h.cleanSend(editOneMedia); err != nil {
-			return err
-		}
-	}
-	// update control buttons
-	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep1Callback, instructionMsgIDs...))
-	return h.cleanSend(buttons)
+func (h *handler) MakeOrderGuideStep1(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error {
+	thumbnails := makeThumbnails(getTemplate().GuideStep1, guideStep1Thumbnail1, guideStep1Thumbnail2)
+	return h.updateGuideStep(chatID, guideMsgIDs, controlButtonsMessageID, orderGuideStep0Callback, thumbnails)
 }
 
-func (h *handler) MakeOrderGuideStep2(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
-	// update content
-	for i, imID := range instructionMsgIDs {
-		url := "https://picsum.photos/300/302"
-		image := tg.NewInputMediaPhoto(tg.FileURL(url))
-		// update Caption only on first element on order to show text (see telegram docs)
-		if i == 0 {
-			image.Caption = "This is step 2 of instruction"
-		}
-		editOneMedia := &tg.EditMessageMediaConfig{
-			BaseEdit: tg.BaseEdit{
-				ChatID:    chatID,
-				MessageID: int(imID),
-			},
-			Media: image,
-		}
-		if err := h.cleanSend(editOneMedia); err != nil {
-			return err
-		}
-	}
-	// update control buttons
-	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep2Callback, instructionMsgIDs...))
-	return h.cleanSend(buttons)
+func (h *handler) MakeOrderGuideStep2(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error {
+	thumbnails := makeThumbnails(getTemplate().GuideStep2, guideStep2Thumbnail1, guideStep2Thumbnail2)
+	return h.updateGuideStep(chatID, guideMsgIDs, controlButtonsMessageID, orderGuideStep1Callback, thumbnails)
 }
 
-func (h *handler) MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
-	// update content
-	for i, imID := range instructionMsgIDs {
-		url := "https://picsum.photos/300/303"
-		image := tg.NewInputMediaPhoto(tg.FileURL(url))
-		// update Caption only on first element on order to show text (see telegram docs)
-		if i == 0 {
-			image.Caption = "This is step 3 of instruction"
-		}
-		editOneMedia := &tg.EditMessageMediaConfig{
-			BaseEdit: tg.BaseEdit{
-				ChatID:    chatID,
-				MessageID: int(imID),
-			},
-			Media: image,
-		}
-		if err := h.cleanSend(editOneMedia); err != nil {
-			return err
-		}
-	}
-	// update control buttons
-	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep3Callback, instructionMsgIDs...))
-	return h.cleanSend(buttons)
+func (h *handler) MakeOrderGuideStep3(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error {
+	thumbnails := makeThumbnails(getTemplate().GuideStep3, guideStep3Thumbnail1, guideStep3Thumbnail2)
+	return h.updateGuideStep(chatID, guideMsgIDs, controlButtonsMessageID, orderGuideStep2Callback, thumbnails)
 }
 
-func (h *handler) MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, instructionMsgIDs ...int64) error {
-	// update content
-	for i, imID := range instructionMsgIDs {
-		url := "https://picsum.photos/300/304"
-		image := tg.NewInputMediaPhoto(tg.FileURL(url))
-		// update Caption only on first element on order to show text (see telegram docs)
-		if i == 0 {
-			image.Caption = "This is step 4 of instruction"
-		}
+func (h *handler) MakeOrderGuideStep4(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error {
+	thumbnails := makeThumbnails(getTemplate().GuideStep4, guideStep4Thumbnail1, guideStep4Thumbnail2)
+	return h.updateGuideStep(chatID, guideMsgIDs, controlButtonsMessageID, orderGuideStep3Callback, thumbnails)
+}
+
+func (h *handler) MakeOrderGuideStep5(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error {
+	thumbnails := makeThumbnails(getTemplate().GuideStep5, guideStep5Thumbnail1, guideStep5Thumbnail2)
+	return h.updateGuideStep(chatID, guideMsgIDs, controlButtonsMessageID, orderGuideStep4Callback, thumbnails)
+}
+
+func (h *handler) MakeOrderGuideStep6(ctx context.Context, chatID int64, controlButtonsMessageID int, guideMsgIDs []int) error {
+	thumbnails := makeThumbnails(getTemplate().GuideStep6, guideStep6Thumbnail1, guideStep6Thumbnail2)
+	return h.updateGuideStep(chatID, guideMsgIDs, controlButtonsMessageID, orderGuideStep5Callback, thumbnails)
+}
+
+func (h *handler) updateGuideStep(chatID int64, guideMsgIDs []int, controlButtonsMessageID int, nextCallback int, thumbnails []interface{}) error {
+	for i, t := range thumbnails {
 		editOneMedia := &tg.EditMessageMediaConfig{
 			BaseEdit: tg.BaseEdit{
 				ChatID:    chatID,
-				MessageID: int(imID),
+				MessageID: guideMsgIDs[i],
 			},
-			Media: image,
+			Media: t,
 		}
 		if err := h.cleanSend(editOneMedia); err != nil {
 			return err
 		}
 	}
+
 	// update control buttons
-	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(orderGuideStep4Callback, instructionMsgIDs...))
+	buttons := tg.NewEditMessageReplyMarkup(chatID, controlButtonsMessageID, prepareOrderGuideButtons(nextCallback, guideMsgIDs...))
 	return h.cleanSend(buttons)
+
 }

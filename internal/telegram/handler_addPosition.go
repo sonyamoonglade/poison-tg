@@ -78,7 +78,7 @@ func (h *handler) HandleButtonSelect(ctx context.Context, c *tg.CallbackQuery, b
 	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Цвет выбранной кнопки: %s", string(button)))); err != nil {
 		return err
 	}
-	text := "Отправь стоимость товара в юанях (указана на выбранной кнопке"
+	text := "Отправь стоимость товара в юанях (указана на выбранной кнопке)."
 	return h.cleanSend(tg.NewMessage(chatID, text))
 }
 
@@ -179,7 +179,7 @@ func (h *handler) AddPosition(ctx context.Context, m *tg.Message) error {
 }
 
 func (h *handler) addPosition(ctx context.Context, chatID int64) error {
-	text := "Шаг 1. Выбери размер (будь внимателен)"
+	text := "Шаг 1. Выбери размер. Если товар безразмерный, то отправь #"
 	if err := h.sendWithKeyboard(chatID, text, bottomMenuWithoutAddPositionButtons); err != nil {
 		return err
 	}

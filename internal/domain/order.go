@@ -18,6 +18,7 @@ const (
 
 var (
 	ErrOrderNotFound = errors.New("order not found")
+	ErrNoOrders      = errors.New("no orders")
 )
 
 type Order struct {
@@ -29,8 +30,8 @@ type Order struct {
 	AmountYUAN      uint64             `json:"amountYuan" bson:"amountYuan"`
 	DeliveryAddress string             `json:"deliveryAddress" bson:"deliveryAddress"`
 	IsPaid          bool               `json:"isPaid" bson:"isPaid"`
-	IsExpress       bool               `json:"isExpress" bson:"isExpress"`
 	IsApproved      bool               `json:"isApproved" bson:"isApproved"`
+	IsExpress       bool               `json:"isExpress" bson:"isExpress"`
 	Status          Status             `json:"status" bson:"status"`
 }
 

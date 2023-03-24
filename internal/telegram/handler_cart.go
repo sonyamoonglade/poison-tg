@@ -50,7 +50,7 @@ func (h *handler) EditCart(ctx context.Context, chatID int64, previewCartMsgID i
 	return h.sendWithKeyboard(chatID, "Выберите номер позиции чтобы удалить её.\nПо клику на кнопку позиция изчезнет из вашей корзины!", buttons)
 }
 
-func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callbackData int, originalMsgID, cartPreviewMsgID int64) error {
+func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callbackData int, originalMsgID, cartPreviewMsgID int) error {
 	var (
 		telegramID    = chatID
 		buttonClicked = callbackData - editCartRemovePositionOffset
@@ -82,11 +82,11 @@ func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callback
 	// if customer has emptied cart
 	if len(customer.Cart) == 0 {
 		// delete edit buttons
-		if _, err := h.b.client.Request(tg.NewDeleteMessage(chatID, int(originalMsgID))); err != nil {
+		if _, err := h.b.client.Request(tg.NewDeleteMessage(chatID, originalMsgID)); err != nil {
 			return fmt.Errorf("can't delete message: %w", err)
 		}
 		// update cartPreview
-		msg := tg.NewEditMessageText(chatID, int(cartPreviewMsgID), "Ваша корзина пуста!")
+		msg := tg.NewEditMessageText(chatID, cartPreviewMsgID, "Ваша корзина пуста!")
 		msg.ReplyMarkup = &addPositionButtons
 		if err := h.cleanSend(msg); err != nil {
 			return fmt.Errorf("cant edit cart preview message: %w", err)
@@ -112,7 +112,7 @@ func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callback
 		return err
 	}
 
-	return h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Позиция %d успешно удалена", buttonClicked)))
+	return h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Позиция %d успешно удалена. Корзина сверху обновлена ✅", buttonClicked)))
 }
 
 func (h *handler) emptyCart(chatID int64) error {

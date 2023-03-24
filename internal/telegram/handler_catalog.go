@@ -10,7 +10,7 @@ import (
 )
 
 // No need to call h.catalogProvider.HasNext. See h.Catalog impl
-func (h *handler) HandleCatalogNext(ctx context.Context, chatID int64, controlButtonsMsgID int64, thumnailMsgIDs []int64) error {
+func (h *handler) HandleCatalogNext(ctx context.Context, chatID int64, controlButtonsMsgID int64, thumbnailMsgIDs []int) error {
 	var telegramID = chatID
 	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
 	if err != nil {
@@ -21,10 +21,10 @@ func (h *handler) HandleCatalogNext(ctx context.Context, chatID int64, controlBu
 	// Increment the offset
 	customer.CatalogOffset++
 
-	return h.updateCatalog(ctx, chatID, thumnailMsgIDs, controlButtonsMsgID, customer, next)
+	return h.updateCatalog(ctx, chatID, thumbnailMsgIDs, controlButtonsMsgID, customer, next)
 }
 
-func (h *handler) HandleCatalogPrev(ctx context.Context, chatID int64, controlButtonsMsgID int64, thumnailMsgIDs []int64) error {
+func (h *handler) HandleCatalogPrev(ctx context.Context, chatID int64, controlButtonsMsgID int64, thumbnailMsgIDs []int) error {
 	var telegramID = chatID
 	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
 	if err != nil {
@@ -35,10 +35,10 @@ func (h *handler) HandleCatalogPrev(ctx context.Context, chatID int64, controlBu
 	// Decrement the offset
 	customer.CatalogOffset--
 
-	return h.updateCatalog(ctx, chatID, thumnailMsgIDs, controlButtonsMsgID, customer, prev)
+	return h.updateCatalog(ctx, chatID, thumbnailMsgIDs, controlButtonsMsgID, customer, prev)
 }
 
-func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumnailMsgIDs []int64, controlButtonsMsgID int64, customer domain.Customer, item domain.CatalogItem) error {
+func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumbnailMsgIDs []int, controlButtonsMsgID int64, customer domain.Customer, item domain.CatalogItem) error {
 	// Get next item images
 	var first bool
 	thumbnails := functools.Map(func(url string) interface{} {
@@ -51,9 +51,9 @@ func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumnailMsgID
 		return thumbnail
 	}, item.ImageURLs)
 
-	var sentMsgIDs []int64
+	var sentMsgIDs []int
 	// Draw it by updating
-	for i, thumbMsgID := range thumnailMsgIDs {
+	for i, thumbMsgID := range thumbnailMsgIDs {
 		editOneMedia := &tg.EditMessageMediaConfig{
 			BaseEdit: tg.BaseEdit{
 				ChatID:    chatID,
@@ -65,7 +65,7 @@ func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumnailMsgID
 		if err != nil {
 			return err
 		}
-		sentMsgIDs = append(sentMsgIDs, int64(sentMessage.MessageID))
+		sentMsgIDs = append(sentMsgIDs, sentMessage.MessageID)
 	}
 
 	updateDTO := dto.UpdateCustomerDTO{

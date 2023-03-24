@@ -12,6 +12,11 @@ import (
 
 var t = new(templates)
 
+const (
+	yes string = "✅"
+	no         = "❌"
+)
+
 type templates struct {
 	Menu                string `json:"menu,omitempty"`
 	Start               string `json:"start,omitempty"`
@@ -22,7 +27,17 @@ type templates struct {
 	CalculatorOutput    string `json:"calculatorOutput,omitempty"`
 	OrderStart          string `json:"order,omitempty"`
 	OrderEnd            string `json:"orderEnd,omitempty"`
+	AfterPaid           string `json:"afterPaid,omitempty"`
 	Requisites          string `json:"requisites,omitempty"`
+	GuideStep1          string `json:"guide_step1,omitempty"`
+	GuideStep2          string `json:"guide_step2,omitempty"`
+	GuideStep3          string `json:"guide_step3,omitempty"`
+	GuideStep4          string `json:"guide_step4,omitempty"`
+	GuideStep5          string `json:"guide_step5,omitempty"`
+	GuideStep6          string `json:"guide_step6,omitempty"`
+	MyOrdersStart       string `json:"myOrdersStart,omitempty"`
+	MyOrdersEnd         string `json:"myOrdersEnd,omitempty"`
+	SingleOrderPreview  string `json:"singleOrderPreview,omitempty"`
 }
 
 func getTemplate() *templates {
@@ -84,8 +99,8 @@ func getCartPreviewEndTemplate(totalRub uint64, totalYuan uint64) string {
 	return fmt.Sprintf(t.CartPreviewEndFMT, totalRub, totalYuan)
 }
 
-func getCalculatorOutput(priceForSPBRub, priceForOuterTown uint64) string {
-	return fmt.Sprintf(t.CalculatorOutput, priceForSPBRub, priceForOuterTown)
+func getCalculatorOutput(price uint64) string {
+	return fmt.Sprintf(t.CalculatorOutput, price)
 }
 
 type orderStartArgs struct {
@@ -116,24 +131,50 @@ func getRequisites(reqs domain.Requisites, shortOrderID string) string {
 	return fmt.Sprintf(t.Requisites, shortOrderID, reqs.SberID, reqs.TinkoffID, shortOrderID)
 }
 
-func extractShortOrderIDFromRequisites(text string) string {
-	var (
-		openIdx  int
-		closeIdx int
-	)
-	for i, ch := range text {
-		if ch == '[' {
-			openIdx = i
-			continue
-		}
-		if ch == ']' {
-			closeIdx = i
-			break
-		}
-	}
-	return text[openIdx+1 : closeIdx]
-}
-
 func getCatalog(username string) string {
 	return fmt.Sprintf(t.Catalog, username)
+}
+
+func getAfterPaid(fullname, shortOrderID string) string {
+	return fmt.Sprintf(t.AfterPaid, fullname, shortOrderID)
+}
+
+func getMyOrdersStart(fullname string) string {
+	return fmt.Sprintf(t.MyOrdersStart, fullname)
+}
+
+type singleOrderArgs struct {
+	shortID                       string
+	isExpress, isPaid, isApproved bool
+	cartLen                       int
+	deliveryAddress               string
+	totalYuan                     uint64
+	totalRub                      uint64
+}
+
+func getSingleOrderPreview(args singleOrderArgs) string {
+	var (
+		expressStr  string
+		paidStr     string
+		approvedStr string
+	)
+	if args.isExpress {
+		expressStr = "Экспресс"
+	} else {
+		expressStr = "Обычный"
+	}
+
+	if args.isPaid {
+		paidStr = yes
+	} else {
+		paidStr = no
+	}
+
+	if args.isApproved {
+		approvedStr = yes
+	} else {
+		approvedStr = no
+	}
+
+	return fmt.Sprintf(t.SingleOrderPreview, args.shortID, paidStr, approvedStr, expressStr, args.deliveryAddress, args.cartLen, args.totalYuan, args.totalRub)
 }

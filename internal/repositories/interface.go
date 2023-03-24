@@ -19,6 +19,8 @@ type Customer interface {
 type Order interface {
 	GetByShortID(ctx context.Context, shortID string) (domain.Order, error)
 	GetFreeShortID(ctx context.Context) (string, error)
+	GetAll(ctx context.Context, customerID primitive.ObjectID) ([]domain.Order, error)
+	UpdateToPaid(ctx context.Context, customerID primitive.ObjectID, shortID string) error
 	Save(ctx context.Context, o domain.Order) error
 }
 

@@ -18,14 +18,18 @@ const (
 // LOGIC DEMANDS ON IOTA
 // todo: change from iota
 const (
-	menuCatalogCallback = iota + 1
+	mockCallback = iota
+	menuCatalogCallback
 	menuTrackOrderCallback
 	menuCalculatorCallback
 	menuMakeOrderCallback
+	myOrdersCallback
+	orderGuideStep0Callback
 	orderGuideStep1Callback
 	orderGuideStep2Callback
 	orderGuideStep3Callback
 	orderGuideStep4Callback
+	orderGuideStep5Callback
 	makeOrderCallback
 	buttonTorqoiseSelectCallback
 	buttonGreySelectCallback
@@ -33,10 +37,15 @@ const (
 	addPositionCallback
 	editCartCallback
 	izhLocationCallback
+	izhLocationCalculatorCallback
 	spbLocationCallback
+	spbLocationCalculatorCallback
 	othLocationCallback
+	othLocationCalculatorCallback
 	orderTypeNormalCallback
+	orderTypeNormalCalculatorCallback
 	orderTypeExpressCallback
+	orderTypeExpressCalculatorCallback
 	paymentCallback
 )
 
@@ -60,25 +69,28 @@ var (
 	addPositionButtons                  = addPos()
 	locationButtons                     = location()
 	orderTypeButtons                    = orderType()
+	locationCalculatorButtons           = locationCalculator()
+	orderTypeCalculatorButtons          = orderTypeCalculator()
 )
 
-func injectMessageIDs(callback int, msgIDs ...int64) string {
+func injectMessageIDs(callback int, msgIDs ...int) string {
 	var msgIDstr string
 	for i, m := range msgIDs {
 		if i < len(msgIDs)-1 {
-			msgIDstr += strconv.Itoa(int(m)) + ","
+			msgIDstr += strconv.Itoa(m) + ","
 		} else {
-			msgIDstr += strconv.Itoa(int(m))
+			msgIDstr += strconv.Itoa(m)
 		}
 	}
-	return msgIDstr + ":" + strconv.Itoa(callback)
+	return "m" + msgIDstr + ":" + strconv.Itoa(callback)
 }
 
 func injectStringData(callback int, str string) string {
-	return str + ":" + strconv.Itoa(callback)
+	return "s" + str + ":" + strconv.Itoa(callback)
 }
 
 func parseStringCallbackData(data string) (payload string, callback int, err error) {
+	data = data[1:]
 	var colonIdx int
 	for i, ch := range data {
 		if ch == ':' {
@@ -94,7 +106,8 @@ func parseStringCallbackData(data string) (payload string, callback int, err err
 	return data[0:colonIdx], callback, nil
 }
 
-func parseCallbackData(data string) (msgIDs []int64, callback int, err error) {
+func parseCallbackData(data string) (injectedData any, callback int, err error) {
+	// raw callback
 	if !strings.ContainsRune(data, ':') {
 		callback, err := strconv.Atoi(data)
 		if err != nil {
@@ -102,29 +115,40 @@ func parseCallbackData(data string) (msgIDs []int64, callback int, err error) {
 		}
 		return nil, callback, nil
 	}
-	var (
-		msgIDstrs []string
-		msgIDints []int64
-	)
 
-	spl := strings.Split(data, ":")
-	msgIDstrs = strings.Split(spl[0], ",")
-	cbStr := spl[1]
+	prefix := data[0]
+	// means message id's are injected
+	if prefix == 'm' {
+		var (
+			msgIDstrs []string
+			msgIDints []int
+		)
+		spl := strings.Split(data[1:], ":")
+		msgIDstrs = strings.Split(spl[0], ",")
+		cbStr := spl[1]
 
-	for _, m := range msgIDstrs {
-		mInt, err := strconv.Atoi(m)
-		if err != nil {
-			return nil, 0, fmt.Errorf("strconv.Atoi msgID: %w", err)
+		for _, m := range msgIDstrs {
+			mInt, err := strconv.Atoi(m)
+			if err != nil {
+				return nil, 0, fmt.Errorf("strconv.Atoi msgID: %w", err)
+			}
+			msgIDints = append(msgIDints, mInt)
 		}
-		msgIDints = append(msgIDints, int64(mInt))
+
+		cbInt, err := strconv.Atoi(cbStr)
+		if err != nil {
+			return nil, 0, fmt.Errorf("strconv.Atoi cb: %w", err)
+		}
+
+		return msgIDints, cbInt, nil
 	}
 
-	cbInt, err := strconv.Atoi(cbStr)
-	if err != nil {
-		return nil, 0, fmt.Errorf("strconv.Atoi cb: %w", err)
+	// string data encoded
+	if prefix == 's' {
+		return parseStringCallbackData(data)
 	}
 
-	return msgIDints, cbInt, nil
+	return
 }
 
 func menu() tg.InlineKeyboardMarkup {
@@ -141,17 +165,20 @@ func menu() tg.InlineKeyboardMarkup {
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Отследить посылку", strconv.Itoa(menuTrackOrderCallback)),
 		),
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Мои заказы", strconv.Itoa(myOrdersCallback)),
+		),
 	)
 }
 
-func prepareOrderGuideButtons(step int, msgIDs ...int64) tg.InlineKeyboardMarkup {
-	if step == orderGuideStep4Callback {
+func prepareOrderGuideButtons(step int, msgIDs ...int) tg.InlineKeyboardMarkup {
+	if step == orderGuideStep5Callback {
 		return tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
 				tg.NewInlineKeyboardButtonData(arrLeft, injectMessageIDs(step-1, msgIDs...)),
 			),
 		)
-	} else if step == orderGuideStep1Callback {
+	} else if step == orderGuideStep0Callback {
 		return tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
 				tg.NewInlineKeyboardButtonData(arrRight, injectMessageIDs(step+1, msgIDs...)),
@@ -240,7 +267,7 @@ func prepareEditCartButtons(n int, previewCartMsgID int) tg.InlineKeyboardMarkup
 	for row := 0; row < numRows; row++ {
 		keyboard = append(keyboard, tg.NewInlineKeyboardRow())
 		for col := 0; col < 3 && current < n; col++ {
-			button := tg.NewInlineKeyboardButtonData(strconv.Itoa(current+1), injectMessageIDs(editCartRemovePositionOffset+current+1, int64(previewCartMsgID)))
+			button := tg.NewInlineKeyboardButtonData(strconv.Itoa(current+1), injectMessageIDs(editCartRemovePositionOffset+current+1, previewCartMsgID))
 			keyboard[row] = append(keyboard[row], button)
 			current++
 		}
@@ -266,17 +293,17 @@ func orderType() tg.InlineKeyboardMarkup {
 		))
 }
 
-func preparePaymentButton(requisitesMsgID int) tg.InlineKeyboardMarkup {
+func preparePaymentButton(orderShortID string) tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Оплатил", injectMessageIDs(paymentCallback, int64(requisitesMsgID))),
+			tg.NewInlineKeyboardButtonData("Оплачено", injectStringData(paymentCallback, orderShortID)),
 		))
 }
 
 type catalogButtonsArgs struct {
 	hasNext, hasPrev     bool
 	nextTitle, prevTitle string
-	msgIDs               []int64
+	msgIDs               []int
 }
 
 func prepareCatalogButtons(args catalogButtonsArgs) tg.InlineKeyboardMarkup {
@@ -297,5 +324,30 @@ func prepareCatalogButtons(args catalogButtonsArgs) tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("< "+args.prevTitle, injectMessageIDs(catalogOffset+catalogPrevCallback, args.msgIDs...)),
+		))
+}
+
+func prepareAfterPaidButtons(shortOrderId string) tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData(fmt.Sprintf("Заказ %s оплачен ✅", shortOrderId), strconv.Itoa(mockCallback)),
+		))
+}
+
+func locationCalculator() tg.InlineKeyboardMarkup {
+
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Ижевск", strconv.Itoa(izhLocationCalculatorCallback)),
+			tg.NewInlineKeyboardButtonData("Питер", strconv.Itoa(spbLocationCalculatorCallback)),
+			tg.NewInlineKeyboardButtonData("Другой город", strconv.Itoa(othLocationCalculatorCallback)),
+		))
+}
+func orderTypeCalculator() tg.InlineKeyboardMarkup {
+
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Экспресс", strconv.Itoa(orderTypeExpressCalculatorCallback)),
+			tg.NewInlineKeyboardButtonData("Обычный", strconv.Itoa(orderTypeNormalCalculatorCallback)),
 		))
 }

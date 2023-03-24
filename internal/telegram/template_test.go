@@ -73,32 +73,6 @@ func TestLoadTemplates(t *testing.T) {
 	}
 }
 
-func TestExtractOrderID(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "extracts short order ID from valid requisites",
-			input:    "Payment received [ABC123] for order #12345",
-			expected: "ABC123",
-		},
-		{
-			name:     "extracts short order ID from empty brackets",
-			input:    "[ABC123]",
-			expected: "ABC123",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actual := extractShortOrderIDFromRequisites(tt.input)
-			require.Equal(t, tt.expected, actual)
-		})
-	}
-}
-
 func TestInjectStringData(t *testing.T) {
 	tests := []struct {
 		name        string

@@ -16,7 +16,7 @@ func (h *handler) AskForFIO(ctx context.Context, chatID int64) error {
 	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForFIO); err != nil {
 		return err
 	}
-	return h.cleanSend(tg.NewMessage(chatID, "Отправь мне ФИО получателя"))
+	return h.cleanSend(tg.NewMessage(chatID, "Укажи ФИО получателя"))
 }
 
 func (h *handler) HandleFIOInput(ctx context.Context, m *tg.Message) error {
@@ -186,23 +186,29 @@ func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Custo
 		return err
 	}
 
-	editButton := tg.NewEditMessageReplyMarkup(chatID, sentRequisitesMsg.MessageID, preparePaymentButton(sentRequisitesMsg.MessageID))
+	editButton := tg.NewEditMessageReplyMarkup(chatID, sentRequisitesMsg.MessageID, preparePaymentButton(order.ShortID))
 	return h.cleanSend(editButton)
 }
 
 func (h *handler) HandlePayment(ctx context.Context, shortOrderID string, c *tg.CallbackQuery) error {
-	return nil
-	// var (
-	// 	chatID     = c.From.ID
-	// 	telegramID = chatID
-	// )
+	var (
+		chatID     = c.From.ID
+		telegramID = chatID
+	)
 
-	// customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
-	// if err != nil {
-	// 	return fmt.Errorf("customerRepo.GetByTelegramID: %w", err)
-	// }
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return fmt.Errorf("customerRepo.GetByTelegramID: %w", err)
+	}
 
-	// shortOrderID := extractShortOrderIDFromRequisites()
-	// panic(err)
-	// return nil
+	if err := h.orderRepo.UpdateToPaid(ctx, customer.CustomerID, shortOrderID); err != nil {
+		return err
+	}
+
+	editButtons := tg.NewEditMessageReplyMarkup(chatID, c.Message.MessageID, prepareAfterPaidButtons(shortOrderID))
+	if err := h.cleanSend(editButtons); err != nil {
+		return err
+	}
+
+	return h.cleanSend(tg.NewMessage(chatID, getAfterPaid(*customer.FullName, shortOrderID)))
 }
