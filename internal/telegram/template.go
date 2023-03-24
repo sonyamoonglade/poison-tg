@@ -178,3 +178,7 @@ func getSingleOrderPreview(args singleOrderArgs) string {
 
 	return fmt.Sprintf(t.SingleOrderPreview, args.shortID, paidStr, approvedStr, expressStr, args.deliveryAddress, args.cartLen, args.totalYuan, args.totalRub)
 }
+
+func getStartTemplate(username string) string {
+	return fmt.Sprintf(t.Start, username)
+}

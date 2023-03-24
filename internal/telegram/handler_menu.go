@@ -31,7 +31,7 @@ func (h *handler) Start(ctx context.Context, m *tg.Message) error {
 			return err
 		}
 	}
-	return h.sendWithKeyboard(chatID, getTemplate().Start, initialMenuKeyboard)
+	return h.sendWithKeyboard(chatID, getStartTemplate(username), initialMenuKeyboard)
 }
 
 func (h *handler) Menu(ctx context.Context, chatID int64) error {
