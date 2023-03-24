@@ -2,6 +2,8 @@
 .PHONY:
 .DEFAULT_GOAL := run
 
+build:
+	go build -o ./build/app cmd/bot/main.go
 run:
 	./scripts/run.sh
 
