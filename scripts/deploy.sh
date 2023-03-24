@@ -1,12 +1,13 @@
 #!/bin/bash
-
+ARCH=amd64
+OS=linux
 IP=$(echo $VM_IP)
 USER=aalexandrovich
 
 # build
 rm -rf ./build
 mkdir build
-go build -o ./build/bot cmd/bot/main.go
+GOOS=$OS GOARCH=$ARCH go build -o ./build/bot cmd/bot/main.go
 cp templates.json ./build
 
 echo "building..."
