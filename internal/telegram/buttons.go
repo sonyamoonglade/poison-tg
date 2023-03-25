@@ -290,8 +290,8 @@ func location() tg.InlineKeyboardMarkup {
 func orderType() tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Экспресс", strconv.Itoa(orderTypeExpressCallback)),
-			tg.NewInlineKeyboardButtonData("Обычный", strconv.Itoa(orderTypeNormalCallback)),
+			tg.NewInlineKeyboardButtonData("Экспресс ~ 4 дня", strconv.Itoa(orderTypeExpressCallback)),
+			tg.NewInlineKeyboardButtonData("Обычный 8~15 дней", strconv.Itoa(orderTypeNormalCallback)),
 		))
 }
 

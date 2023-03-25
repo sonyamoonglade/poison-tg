@@ -10,7 +10,7 @@ import (
 )
 
 func (h *handler) askForOrderType(ctx context.Context, chatID int64) error {
-	text := "Выбери тип доставки (время экспресс перевозки в среднем составляет 4 дня из Китая в СПб, обычная перевозка составляет 8-15 дней)"
+	text := "Выбери тип доставки"
 	return h.sendWithKeyboard(chatID, text, orderTypeButtons)
 }
 
