@@ -52,7 +52,7 @@ func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ do
 		return err
 	}
 
-	var resp = "Тип заказа: "
+	var resp = "Тип доставки: "
 	switch isExpress {
 	case true:
 		resp += "Экспресс"

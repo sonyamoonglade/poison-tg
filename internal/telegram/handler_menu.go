@@ -64,6 +64,9 @@ func (h *handler) MyOrders(ctx context.Context, chatID int64) error {
 
 		return err
 	}
+	if len(orders) == 0 {
+		return h.cleanSend(tg.NewMessage(chatID, "У вас еще нет заказов :("))
+	}
 	var name string
 	if customer.FullName != nil {
 		name = *customer.FullName
