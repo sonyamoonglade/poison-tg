@@ -231,6 +231,8 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return r.h.StartMakeOrderGuide(ctx, c.Message)
 	case menuCalculatorCallback:
 		return r.h.AskForCalculatorOrderType(ctx, chatID)
+	case calculateMoreCallback:
+		return r.h.AskForCalculatorOrderType(ctx, chatID)
 	case orderGuideStep0Callback:
 		return r.h.MakeOrderGuideStep1(ctx, chatID, msgID, callbackDataMsgIDs)
 	case orderGuideStep1Callback:

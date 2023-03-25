@@ -175,7 +175,23 @@ func (h *handler) HandleLinkInput(ctx context.Context, m *tg.Message) error {
 }
 
 func (h *handler) AddPosition(ctx context.Context, m *tg.Message) error {
-	return h.addPosition(ctx, m.Chat.ID)
+	var (
+		chatID     = m.Chat.ID
+		telegramID = chatID
+	)
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+	if len(customer.Cart) > 0 {
+		// Means that we can use customer.Meta and it's valid
+		return h.addPosition(ctx, m.Chat.ID)
+	}
+	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForOrderType); err != nil {
+		return err
+	}
+	// Otherwise start from order type selection
+	return h.askForOrderType(ctx, chatID)
 }
 
 func (h *handler) addPosition(ctx context.Context, chatID int64) error {

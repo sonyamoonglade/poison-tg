@@ -22,6 +22,7 @@ const (
 	menuCatalogCallback
 	menuTrackOrderCallback
 	menuCalculatorCallback
+	calculateMoreCallback
 	menuMakeOrderCallback
 	myOrdersCallback
 	orderGuideStep0Callback
@@ -71,6 +72,7 @@ var (
 	orderTypeButtons                    = orderType()
 	locationCalculatorButtons           = locationCalculator()
 	orderTypeCalculatorButtons          = orderTypeCalculator()
+	calculateMoreButtons                = calculateMore()
 )
 
 func injectMessageIDs(callback int, msgIDs ...int) string {
@@ -310,20 +312,20 @@ func prepareCatalogButtons(args catalogButtonsArgs) tg.InlineKeyboardMarkup {
 	if args.hasNext && args.hasPrev {
 		return tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
-				tg.NewInlineKeyboardButtonData("< "+args.prevTitle, injectMessageIDs(catalogOffset+catalogPrevCallback, args.msgIDs...)),
-				tg.NewInlineKeyboardButtonData(args.nextTitle+" >", injectMessageIDs(catalogOffset+catalogNextCallback, args.msgIDs...)),
+				tg.NewInlineKeyboardButtonData(arrLeft+" "+args.prevTitle, injectMessageIDs(catalogOffset+catalogPrevCallback, args.msgIDs...)),
+				tg.NewInlineKeyboardButtonData(args.nextTitle+" "+arrRight, injectMessageIDs(catalogOffset+catalogNextCallback, args.msgIDs...)),
 			))
 	} else if args.hasNext {
 		return tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
-				tg.NewInlineKeyboardButtonData(args.nextTitle+" >", injectMessageIDs(catalogOffset+catalogNextCallback, args.msgIDs...)),
+				tg.NewInlineKeyboardButtonData(args.nextTitle+" "+arrRight, injectMessageIDs(catalogOffset+catalogNextCallback, args.msgIDs...)),
 			))
 	}
 
 	// only prev
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("< "+args.prevTitle, injectMessageIDs(catalogOffset+catalogPrevCallback, args.msgIDs...)),
+			tg.NewInlineKeyboardButtonData(arrLeft+" "+args.prevTitle, injectMessageIDs(catalogOffset+catalogPrevCallback, args.msgIDs...)),
 		))
 }
 
@@ -344,10 +346,16 @@ func locationCalculator() tg.InlineKeyboardMarkup {
 		))
 }
 func orderTypeCalculator() tg.InlineKeyboardMarkup {
-
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Экспресс", strconv.Itoa(orderTypeExpressCalculatorCallback)),
-			tg.NewInlineKeyboardButtonData("Обычный", strconv.Itoa(orderTypeNormalCalculatorCallback)),
+			tg.NewInlineKeyboardButtonData("Экспресс ~ 4 дня", strconv.Itoa(orderTypeExpressCalculatorCallback)),
+			tg.NewInlineKeyboardButtonData("Обычный 8~15 дней", strconv.Itoa(orderTypeNormalCalculatorCallback)),
+		))
+}
+
+func calculateMore() tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Посчитать еще!", strconv.Itoa(calculateMoreCallback)),
 		))
 }

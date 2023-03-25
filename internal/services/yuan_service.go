@@ -33,6 +33,10 @@ func (y yuanService) ApplyFormula(x uint64, args UseFormulaArguments) (uint64, e
 	return y.locFormula(rate, args.Location, x), nil
 }
 
+func (y yuanService) GetRate() (float64, error) {
+	return y.rateProvider.GetYuanRate()
+}
+
 const (
 	// yuan
 	expressOrderFee = 255

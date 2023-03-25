@@ -14,6 +14,7 @@ type UseFormulaArguments struct {
 type Yuan interface {
 	// ApplyFormula Accepts price in yuan, returns rounded to up price in rub
 	ApplyFormula(yuanAmount uint64, args UseFormulaArguments) (uint64, error)
+	GetRate() (float64, error)
 }
 
 type Order interface {
