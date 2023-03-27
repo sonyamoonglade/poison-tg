@@ -21,3 +21,13 @@ type UpdateItemDTO struct {
 	RankUPItemID   primitive.ObjectID
 	RankDownItemID primitive.ObjectID
 }
+
+type AddCommentDTO struct {
+	OrderID primitive.ObjectID
+	Comment string
+}
+
+type ChangeOrderStatusDTO struct {
+	OrderID   primitive.ObjectID
+	NewStatus domain.Status
+}

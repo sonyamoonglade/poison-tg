@@ -125,14 +125,8 @@ func (c *Customer) NullifyCatalogOffset() {
 	c.CatalogOffset = 0
 }
 
-func MakeUsername(firstName string, lastName string, username string) string {
-	var out string
-	if firstName == "" || lastName == "" {
-		out = username
-	} else if firstName != "" && lastName != "" {
-		out = firstName + " " + lastName
-	}
-	return out
+func MakeUsername(username string) string {
+	return username
 }
 
 func IsValidFullName(fullName string) bool {
@@ -143,9 +137,12 @@ func IsValidFullName(fullName string) bool {
 	return true
 }
 
-var r = regexp.MustCompile(`(?m)^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$`)
+var r = regexp.MustCompile(`^(8|7)((\d{10})|(\s\(\d{3}\)\s\d{3}\s\d{2}\s\d{2}))`)
 
 func IsValidPhoneNumber(phoneNumber string) bool {
+	if len(phoneNumber) != 11 {
+		return false
+	}
 	return r.MatchString(phoneNumber)
 }
 

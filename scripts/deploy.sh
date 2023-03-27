@@ -7,13 +7,14 @@ USER=aalexandrovich
 # build
 rm -rf ./build
 mkdir build
-GOOS=$OS GOARCH=$ARCH go build -o ./build/bot cmd/bot/main.go
+GOOS=$OS GOARCH=$ARCH go build -o ./build/app cmd/app/main.go
 cp templates.json ./build
+cp -r videos ./build
 
 echo "building..."
 
 # stop existing session
-ssh -i ~/.ssh/vadim-shop $USER@$IP "kill -9 \$(pidof bot)"
+ssh -i ~/.ssh/vadim-shop $USER@$IP "kill -9 \$(pidof app)"
 
 echo "stopped running process"
 

@@ -61,7 +61,7 @@ func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ do
 		resp += "Обычный"
 		break
 	}
-	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
+	if err := h.sendMessage(chatID, resp); err != nil {
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (h *handler) HandleLocationInput(ctx context.Context, chatID int64, loc dom
 		break
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
+	if err := h.sendMessage(chatID, resp); err != nil {
 		return err
 	}
 

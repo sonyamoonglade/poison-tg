@@ -53,7 +53,7 @@ func TestNewOrder(t *testing.T) {
 				DeliveryAddress: "",
 				IsPaid:          false,
 				IsApproved:      false,
-				Status:          StatusDefault,
+				Status:          StatusNotApproved,
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func TestNewOrder(t *testing.T) {
 				DeliveryAddress: "123 Main St., Anytown, USA",
 				IsPaid:          false,
 				IsApproved:      false,
-				Status:          StatusDefault,
+				Status:          StatusNotApproved,
 			},
 		},
 	}

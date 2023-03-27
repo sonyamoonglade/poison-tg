@@ -28,6 +28,14 @@ func (c *customerRepo) Save(ctx context.Context, customer domain.Customer) error
 	}
 	return nil
 }
+
+func (c *customerRepo) NullifyCatalogOffsets(ctx context.Context) error {
+	filter := bson.D{}
+	update := bson.M{"$set": bson.M{"catalogOffset": 0}}
+	_, err := c.customers.UpdateMany(ctx, filter, update)
+	return err
+}
+
 func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID, dto dto.UpdateCustomerDTO) error {
 	update := bson.M{}
 	if dto.Cart != nil {

@@ -2,6 +2,8 @@ package telegram
 
 import (
 	"context"
+	"reflect"
+
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
@@ -19,7 +21,7 @@ func (h *handler) Catalog(ctx context.Context, chatID int64) error {
 		return err
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, getCatalog(*customer.Username))); err != nil {
+	if err := h.sendMessage(chatID, getCatalog(*customer.Username)); err != nil {
 		return err
 	}
 
@@ -33,6 +35,7 @@ func (h *handler) Catalog(ctx context.Context, chatID int64) error {
 			thumbnail.Caption = item.GetCaption()
 			first = true
 		}
+		thumbnail.ParseMode = parseModeHTML
 		return thumbnail
 	}, item.ImageURLs)
 
@@ -71,6 +74,10 @@ func (h *handler) Catalog(ctx context.Context, chatID int64) error {
 		btnArgs.prevTitle = prev.Title
 	}
 
+	if !hasPrev && !hasNext {
+		return nil
+	}
+
 	buttons := prepareCatalogButtons(btnArgs)
 	return h.sendWithKeyboard(chatID, "Кнопки для пролистывания каталога", buttons)
 }
@@ -105,6 +112,10 @@ func (h *handler) HandleCatalogPrev(ctx context.Context, chatID int64, controlBu
 }
 
 func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumbnailMsgIDs []int, controlButtonsMsgID int64, customer domain.Customer, item domain.CatalogItem) error {
+	// Null
+	if reflect.DeepEqual(domain.CatalogItem{}, item) {
+		return nil
+	}
 	// Get next item images
 	var first bool
 	thumbnails := functools.Map(func(url string) interface{} {
@@ -114,6 +125,7 @@ func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumbnailMsgI
 			thumbnail.Caption = item.GetCaption()
 			first = true
 		}
+		thumbnail.ParseMode = parseModeHTML
 		return thumbnail
 	}, item.ImageURLs)
 

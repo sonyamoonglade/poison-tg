@@ -4,6 +4,11 @@ import (
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const (
+	parseModeMarkdown = "markdown"
+	parseModeHTML     = "html"
+)
+
 type Config struct {
 	Token string
 }

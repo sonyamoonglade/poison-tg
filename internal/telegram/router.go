@@ -10,6 +10,7 @@ import (
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
+	"github.com/sonyamoonglade/poison-tg/pkg/utils/ranges"
 	"go.uber.org/zap"
 )
 
@@ -28,6 +29,9 @@ type RouteHandler interface {
 	Menu(ctx context.Context, chatID int64) error
 	Catalog(ctx context.Context, chatID int64) error
 	MyOrders(ctx context.Context, chatID int64) error
+	FAQ(ctx context.Context, chatID int64) error
+
+	AnswerQuestion(chatID int64, n int) error
 
 	AskForCalculatorOrderType(ctx context.Context, chatID int64) error
 	HandleCalculatorOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error
@@ -156,7 +160,8 @@ func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 	// get state and route accordingly
 	logger.Get().Debug("message info",
 		zap.String("text", m.Text),
-		zap.Time("date", m.Time()))
+		zap.String("from", m.From.UserName),
+		zap.String("date", m.Time().Format(time.RFC822)))
 	switch true {
 	case cmd(startCommand):
 		return r.h.Start(ctx, m)
@@ -195,9 +200,11 @@ func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 }
 
 func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) error {
-	defer logger.Get().Debug("callback info",
+
+	logger.Get().Debug("callback info",
 		zap.String("data", c.Data),
-		zap.Time("date", c.Message.Time()))
+		zap.String("from", c.From.UserName),
+		zap.String("date", c.Message.Time().Format(time.RFC822)))
 
 	defer r.h.AnswerCallback(c.ID)
 
@@ -224,7 +231,7 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 	}
 
 	switch intCallbackData {
-	case mockCallback:
+	case noopCallback:
 		// Do not do anything
 		return nil
 	case menuMakeOrderCallback:
@@ -247,13 +254,12 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return r.h.MakeOrderGuideStep6(ctx, chatID, msgID, callbackDataMsgIDs)
 	case makeOrderCallback:
 		return r.h.AskForFIO(ctx, chatID)
-	case menuTrackOrderCallback:
-		// TODO
-		return nil
 	case menuCatalogCallback:
 		return r.h.Catalog(ctx, chatID)
-	case myOrdersCallback:
+	case menuMyOrdersCallback:
 		return r.h.MyOrders(ctx, chatID)
+	case menuFaqCallback:
+		return r.h.FAQ(ctx, chatID)
 	case buttonTorqoiseSelectCallback:
 		return r.h.HandleButtonSelect(ctx, c, domain.ButtonTorqoise)
 	case buttonGreySelectCallback:
@@ -288,19 +294,26 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		// stringData in this case is orderShortID
 		return r.h.HandlePayment(ctx, stringData, c)
 	default:
+		// intCallback > edit
 		// Remove position callback
-		if intCallbackData >= editCartRemovePositionOffset && intCallbackData < catalogOffset {
+		if ranges.IsBetween(intCallbackData, editCartRemovePositionOffset, catalogOffset) {
 			// callbackDataMsgIDs[0] - id of preview cart message
 			return r.h.RemoveCartPosition(ctx, chatID, intCallbackData, msgID, callbackDataMsgIDs[0])
 		}
+
 		// Prev or next callback
-		if intCallbackData >= catalogOffset {
+		if ranges.IsBetweenInc(intCallbackData, catalogOffset, faqOffset) {
 			switch intCallbackData - catalogOffset {
 			case catalogNextCallback:
 				return r.h.HandleCatalogNext(ctx, chatID, int64(msgID), callbackDataMsgIDs)
 			case catalogPrevCallback:
 				return r.h.HandleCatalogPrev(ctx, chatID, int64(msgID), callbackDataMsgIDs)
 			}
+		}
+		// todo: rm faqOffset + 1000
+		if ranges.IsBetween(intCallbackData, faqOffset, faqOffset+1000) {
+			n_question := intCallbackData - faqOffset
+			return r.h.AnswerQuestion(chatID, n_question)
 		}
 
 		return ErrNoHandler

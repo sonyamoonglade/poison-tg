@@ -3,12 +3,13 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
 	"github.com/sonyamoonglade/poison-tg/internal/services"
-	"strconv"
-	"strings"
 )
 
 func (h *handler) AskForCalculatorOrderType(ctx context.Context, chatID int64) error {
@@ -67,7 +68,7 @@ func (h *handler) HandleCalculatorOrderTypeInput(ctx context.Context, chatID int
 		resp += "Обычный"
 		break
 	}
-	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
+	if err := h.sendMessage(chatID, resp); err != nil {
 		return err
 	}
 
@@ -81,7 +82,7 @@ func (h *handler) HandleCalculatorOrderTypeInput(ctx context.Context, chatID int
 }
 
 func (h *handler) askForCalculatorLocation(ctx context.Context, chatID int64) error {
-	text := "Из какого ты города?"
+	text := "Из какого ты города? 🌄"
 	return h.sendWithKeyboard(chatID, text, locationCalculatorButtons)
 }
 
@@ -119,7 +120,7 @@ func (h *handler) HandleCalculatorLocationInput(ctx context.Context, chatID int6
 		break
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
+	if err := h.sendMessage(chatID, resp); err != nil {
 		return err
 	}
 
@@ -142,7 +143,7 @@ func (h *handler) askForCalculatorInput(ctx context.Context, chatID int64) error
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
 
-	return h.cleanSend(tg.NewMessage(chatID, "Отправь мне цену товара в юанях, а я скажу сколько это будет стоить в переводе на рубли для тебя"))
+	return h.sendMessage(chatID, askForCalculatorInputTemplate)
 }
 
 func (h *handler) HandleCalculatorInput(ctx context.Context, m *tg.Message) error {
@@ -156,7 +157,7 @@ func (h *handler) HandleCalculatorInput(ctx context.Context, m *tg.Message) erro
 
 	inputUint, err := strconv.ParseUint(input, 10, 64)
 	if err != nil {
-		if err := h.cleanSend(tg.NewMessage(chatID, "Неправильный формат ввода")); err != nil {
+		if err := h.sendMessage(chatID, "Неправильный формат ввода"); err != nil {
 			return err
 		}
 		return fmt.Errorf("strconv.ParseUint: %w", err)

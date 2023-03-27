@@ -16,7 +16,7 @@ func (h *handler) AskForFIO(ctx context.Context, chatID int64) error {
 	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForFIO); err != nil {
 		return err
 	}
-	return h.cleanSend(tg.NewMessage(chatID, "Укажи ФИО получателя"))
+	return h.sendMessage(chatID, askForFIOTemplate)
 }
 
 func (h *handler) HandleFIOInput(ctx context.Context, m *tg.Message) error {
@@ -26,7 +26,6 @@ func (h *handler) HandleFIOInput(ctx context.Context, m *tg.Message) error {
 		fullName   = strings.TrimSpace(m.Text)
 	)
 
-	// validate state
 	if err := h.checkRequiredState(ctx, domain.StateWaitingForFIO, chatID); err != nil {
 		return err
 	}
@@ -37,7 +36,7 @@ func (h *handler) HandleFIOInput(ctx context.Context, m *tg.Message) error {
 	}
 
 	if !domain.IsValidFullName(fullName) {
-		return h.cleanSend(tg.NewMessage(chatID, "Неправильный формат полного имени.\n Отправь полное имя в формате - Иванов Иван Иванович"))
+		return h.sendMessage(chatID, invalidFIOInputTemplate)
 	}
 
 	updateDTO := dto.UpdateCustomerDTO{
@@ -49,11 +48,11 @@ func (h *handler) HandleFIOInput(ctx context.Context, m *tg.Message) error {
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Спасибо, %s. ", fullName))); err != nil {
+	if err := h.sendMessage(chatID, fmt.Sprintf("Спасибо, %s. ", fullName)); err != nil {
 		return err
 	}
 
-	return h.cleanSend(tg.NewMessage(chatID, "Отправь мне свой контактный номер телефона в формате:\n\t>79999999999"))
+	return h.sendMessage(chatID, askForPhoneNumberTemplate)
 }
 
 func (h *handler) HandlePhoneNumberInput(ctx context.Context, m *tg.Message) error {
@@ -63,13 +62,12 @@ func (h *handler) HandlePhoneNumberInput(ctx context.Context, m *tg.Message) err
 		phoneNumber = strings.TrimSpace(m.Text)
 	)
 
-	// validate state
 	if err := h.checkRequiredState(ctx, domain.StateWaitingForPhoneNumber, chatID); err != nil {
 		return err
 	}
 
 	if !domain.IsValidPhoneNumber(phoneNumber) {
-		return h.cleanSend(tg.NewMessage(chatID, "Неправильный формат номера телефона.\n Отправь номер в формате - 79999999999"))
+		return h.sendMessage(chatID, "Неправильный формат номера телефона.\n"+askForPhoneNumberTemplate)
 	}
 
 	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
@@ -86,11 +84,11 @@ func (h *handler) HandlePhoneNumberInput(ctx context.Context, m *tg.Message) err
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
 
-	if err := h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Спасибо, номер [%s] принят!", phoneNumber))); err != nil {
+	if err := h.sendMessage(chatID, fmt.Sprintf("Спасибо, номер [%s] принят!", phoneNumber)); err != nil {
 		return err
 	}
 
-	return h.cleanSend(tg.NewMessage(chatID, "Отправь адрес ближайшего постамата PickPoint или отделения Сбера (Сбербанк).\nЯ доставлю твой заказ туда!"))
+	return h.sendMessage(chatID, askForDeliveryAddressTemplate)
 }
 
 func (h *handler) HandleDeliveryAddressInput(ctx context.Context, m *tg.Message) error {
@@ -135,10 +133,6 @@ func (h *handler) HandleDeliveryAddressInput(ctx context.Context, m *tg.Message)
 	return h.prepareOrderPreview(ctx, customer, order, chatID)
 }
 
-func (h *handler) makeOrder(ctx context.Context, m *tg.Message) error {
-	return nil
-}
-
 func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Customer, order domain.Order, chatID int64) error {
 	out := getOrderStart(orderStartArgs{
 		fullName:        *customer.FullName,
@@ -161,7 +155,7 @@ func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Custo
 
 	out += getOrderEnd(order.AmountRUB)
 
-	if err := h.cleanSend(tg.NewMessage(chatID, out)); err != nil {
+	if err := h.sendMessage(chatID, out); err != nil {
 		return err
 	}
 
@@ -175,12 +169,7 @@ func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Custo
 		return err
 	}
 
-	requisites, err := h.businessRepo.GetRequisites(ctx)
-	if err != nil {
-		return err
-	}
-
-	requisitesMsg := tg.NewMessage(chatID, getRequisites(requisites, order.ShortID))
+	requisitesMsg := tg.NewMessage(chatID, getRequisites(domain.AdminRequisites, order.ShortID))
 	sentRequisitesMsg, err := h.b.Send(requisitesMsg)
 	if err != nil {
 		return err
@@ -210,5 +199,5 @@ func (h *handler) HandlePayment(ctx context.Context, shortOrderID string, c *tg.
 		return err
 	}
 
-	return h.cleanSend(tg.NewMessage(chatID, getAfterPaid(*customer.FullName, shortOrderID)))
+	return h.sendWithKeyboard(chatID, getAfterPaid(*customer.FullName, shortOrderID), makeOrderButtons)
 }

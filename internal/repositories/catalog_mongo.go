@@ -3,9 +3,11 @@ package repositories
 import (
 	"context"
 	"errors"
+	"io"
 
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
+	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -26,6 +28,62 @@ func NewCatalogRepo(catalog *mongo.Collection, onChangeFunc OnChangeFunc) *catal
 		catalog:  catalog,
 		onChange: onChangeFunc,
 	}
+}
+
+func (c *catalogRepo) GetIDByRank(ctx context.Context, rank uint) (primitive.ObjectID, error) {
+	res := c.catalog.FindOne(ctx, bson.M{"rank": rank})
+	if res.Err() != nil {
+		if errors.Is(res.Err(), mongo.ErrNoDocuments) {
+			return primitive.ObjectID{}, domain.ErrItemNotFound
+		}
+		return primitive.ObjectID{}, res.Err()
+	}
+	var item domain.CatalogItem
+	if err := res.Decode(&item); err != nil {
+		return primitive.ObjectID{}, err
+	}
+	return item.ItemID, nil
+
+}
+
+func (c *catalogRepo) GetRankByID(ctx context.Context, itemID primitive.ObjectID) (uint, error) {
+	res := c.catalog.FindOne(ctx, bson.M{"_id": itemID})
+	if res.Err() != nil {
+		if errors.Is(res.Err(), mongo.ErrNoDocuments) {
+			return 0, domain.ErrItemNotFound
+		}
+		return 0, res.Err()
+	}
+	var item domain.CatalogItem
+	if err := res.Decode(&item); err != nil {
+		return 0, err
+	}
+	return item.Rank, nil
+}
+
+func (c *catalogRepo) GetLastRank(ctx context.Context) (uint, error) {
+	filter := bson.D{}
+	opts := options.Find()
+	opts.SetSort(bson.M{"rank": -1})
+	opts.SetLimit(1)
+	res, err := c.catalog.Find(ctx, filter)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return 0, domain.ErrItemNotFound
+		}
+		if errors.Is(err, io.EOF) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	var item domain.CatalogItem
+	if err := res.Decode(&item); err != nil {
+		if errors.Is(err, io.EOF) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return item.Rank, nil
 }
 
 func (c *catalogRepo) GetCatalog(ctx context.Context) ([]domain.CatalogItem, error) {
@@ -67,6 +125,36 @@ func (c *catalogRepo) AddItem(ctx context.Context, item domain.CatalogItem) erro
 
 func (c *catalogRepo) RemoveItem(ctx context.Context, itemID primitive.ObjectID) error {
 	_, err := c.catalog.DeleteOne(ctx, bson.M{"_id": itemID})
+	catalog, err := c.GetCatalog(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Update ranks
+	newCatalog := functools.Map(func(catalogItem domain.CatalogItem) domain.CatalogItem {
+		if catalogItem.Rank == 0 {
+			return catalogItem
+		}
+
+		catalogItem.Rank--
+		return catalogItem
+	}, catalog)
+
+	for _, newItem := range newCatalog {
+		if _, err := c.catalog.UpdateOne(ctx, bson.M{"_id": newItem.ItemID}, bson.M{"$set": bson.M{"rank": newItem.Rank}}); err != nil {
+			return err
+		}
+	}
+
+	defer func() {
+		// Notify on change
+		newCatalog, err := c.GetCatalog(ctx)
+		if err != nil {
+			logger.Get().Error("deferred catalog notify", zap.Error(err))
+			return
+		}
+		c.onChange(newCatalog)
+	}()
 	return err
 }
 
@@ -79,26 +167,14 @@ func (c *catalogRepo) UpdateRanks(ctx context.Context, dto dto.UpdateItemDTO) er
 		}
 
 		// Increment rank by id
-		incQuery := bson.E{
-			Key: "$inc",
-			Value: bson.E{
-				Key:   "rank",
-				Value: 1,
-			},
-		}
+		incQuery := bson.M{"$inc": bson.M{"rank": 1}}
 		if _, err := c.catalog.UpdateOne(tx, bson.M{"_id": dto.RankUPItemID}, incQuery); err != nil {
 			tx.AbortTransaction(ctx)
 			return err
 		}
 
 		// Decrement rank by id
-		decrQuery := bson.E{
-			Key: "$inc",
-			Value: bson.E{
-				Key:   "rank",
-				Value: -1,
-			},
-		}
+		decrQuery := bson.M{"$inc": bson.M{"rank": -1}}
 		if _, err := c.catalog.UpdateOne(tx, bson.M{"_id": dto.RankDownItemID}, decrQuery); err != nil {
 			tx.AbortTransaction(ctx)
 			return err
@@ -109,5 +185,14 @@ func (c *catalogRepo) UpdateRanks(ctx context.Context, dto dto.UpdateItemDTO) er
 		return err
 	}
 
+	defer func() {
+		// Notify on change
+		newCatalog, err := c.GetCatalog(ctx)
+		if err != nil {
+			logger.Get().Error("deferred catalog notify", zap.Error(err))
+			return
+		}
+		c.onChange(newCatalog)
+	}()
 	return nil
 }

@@ -17,6 +17,29 @@ const (
 	no         = "❌"
 )
 
+const (
+	askForDeliveryAddressTemplate = "Отправь адрес ближайшего постамата PickPoint или отделения Сбера ⛳️ в формате:\n\n" +
+		"Страна, область, город, улица, номер дома/строения 🏡\n\n" +
+		"Я доставлю твой заказ туда если ты из «другого города» 🚚"
+	askForPhoneNumberTemplate = "Отправь мне свой контактный номер телефона в формате:\n 👉 79128000000"
+
+	invalidFIOInputTemplate = "Неправильный формат полного имени.\\n Отправь полное имя в " +
+		"формате - Иванов Иван Иванович"
+
+	askForFIOTemplate             = "Укажи ФИО получателя \U0001FAAA"
+	askForButtonColorTemplate     = "Выбери цвет кнопки\n(влияет на условия доставки 🚚 и цену 🥬 в дальнейшем)"
+	askForSizeTemplate            = "Шаг 1. Выбери размер 📏\nЕсли товар безразмерный, то отправь #"
+	askForPriceTemplate           = "Отправь стоимость товара в юанях ¥\n(указана на выбранной кнопке) 💴"
+	askForLinkTemplate            = "Отправь ссылку на выбранный товар (строго по инструкции) 📝"
+	askForCalculatorInputTemplate = "Отправь стоимость товара в ¥, я посчитаю это в ₽  🇨🇳🇷🇺\n\nЕсли ты из " +
+		"«другого города», то цена будет указана без учета оплаты ТК 🚚"
+
+	editPositionTemplate = "Выбери номер позиции, чтобы удалить её 🙅‍♂️\n\nПо клику на " +
+		"кнопку позиция изчезнет из твоей корзины!"
+
+	newPositionWarnTemplate = "Новый добавленный товар будет соответствовать типу доставки и городу первоначально добавленного товара в корзине 🦧"
+)
+
 type templates struct {
 	Menu                string `json:"menu,omitempty"`
 	Start               string `json:"start,omitempty"`
@@ -148,6 +171,8 @@ type singleOrderArgs struct {
 	isExpress, isPaid, isApproved bool
 	cartLen                       int
 	deliveryAddress               string
+	status                        domain.Status
+	comment                       *string
 	totalYuan                     uint64
 	totalRub                      uint64
 }
@@ -157,6 +182,7 @@ func getSingleOrderPreview(args singleOrderArgs) string {
 		expressStr  string
 		paidStr     string
 		approvedStr string
+		commentStr  string
 	)
 	if args.isExpress {
 		expressStr = "Экспресс"
@@ -176,7 +202,13 @@ func getSingleOrderPreview(args singleOrderArgs) string {
 		approvedStr = no
 	}
 
-	return fmt.Sprintf(t.SingleOrderPreview, args.shortID, paidStr, approvedStr, expressStr, args.deliveryAddress, args.cartLen, args.totalYuan, args.totalRub)
+	if args.comment == nil {
+		commentStr = "временно отсутствует"
+	} else {
+		commentStr = *args.comment
+	}
+
+	return fmt.Sprintf(t.SingleOrderPreview, args.shortID, expressStr, args.deliveryAddress, paidStr, approvedStr, domain.StatusTexts[args.status], args.cartLen, args.totalRub, args.totalYuan, commentStr)
 }
 
 func getStartTemplate(username string) string {

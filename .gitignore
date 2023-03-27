@@ -2,3 +2,7 @@
 .idea
 build
 config.yml
+*.MP4
+*.MOV
+*.mov
+videos

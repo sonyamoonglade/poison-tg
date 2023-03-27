@@ -18,13 +18,13 @@ const (
 // LOGIC DEMANDS ON IOTA
 // todo: change from iota
 const (
-	mockCallback = iota
+	noopCallback = iota
 	menuCatalogCallback
-	menuTrackOrderCallback
+	menuFaqCallback
+	menuMyOrdersCallback
 	menuCalculatorCallback
 	calculateMoreCallback
 	menuMakeOrderCallback
-	myOrdersCallback
 	orderGuideStep0Callback
 	orderGuideStep1Callback
 	orderGuideStep2Callback
@@ -53,11 +53,25 @@ const (
 const (
 	editCartRemovePositionOffset = 1000
 	catalogOffset                = 1200
+	faqOffset                    = 1400
 )
 
 const (
 	catalogPrevCallback = iota + 1
 	catalogNextCallback
+)
+
+const (
+	faqQuestion1Callback = iota + 1
+	faqQuestion2Callback
+	faqQuestion3Callback
+	faqQuestion4Callback
+	faqQuestion5Callback
+	faqQuestion6Callback
+	faqQuestion7Callback
+	faqQuestion8Callback
+	faqQuestion9Callback
+	faqQuestion10Callback
 )
 
 var (
@@ -68,11 +82,13 @@ var (
 	bottomMenuWithoutAddPositionButtons = bottomMenuWithoutAddPosition()
 	cartPreviewButtons                  = cartPreview()
 	addPositionButtons                  = addPos()
+	makeOrderButtons                    = makeOrder()
 	locationButtons                     = location()
 	orderTypeButtons                    = orderType()
 	locationCalculatorButtons           = locationCalculator()
 	orderTypeCalculatorButtons          = orderTypeCalculator()
 	calculateMoreButtons                = calculateMore()
+	askMoreFaqButtons                   = askMoreFaq()
 )
 
 func injectMessageIDs(callback int, msgIDs ...int) string {
@@ -165,10 +181,10 @@ func menu() tg.InlineKeyboardMarkup {
 			tg.NewInlineKeyboardButtonData("Калькулятор стоимости", strconv.Itoa(menuCalculatorCallback)),
 		),
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Отследить посылку", strconv.Itoa(menuTrackOrderCallback)),
+			tg.NewInlineKeyboardButtonData("Вопросы", strconv.Itoa(menuFaqCallback)),
 		),
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Мои заказы", strconv.Itoa(myOrdersCallback)),
+			tg.NewInlineKeyboardButtonData("Мои заказы", strconv.Itoa(menuMyOrdersCallback)),
 		),
 	)
 }
@@ -258,6 +274,13 @@ func addPos() tg.InlineKeyboardMarkup {
 		))
 }
 
+func makeOrder() tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Сделать заказ", strconv.Itoa(addPositionCallback)),
+		))
+}
+
 func prepareEditCartButtons(n int, previewCartMsgID int) tg.InlineKeyboardMarkup {
 	keyboard := make([][]tg.InlineKeyboardButton, 0)
 
@@ -332,12 +355,11 @@ func prepareCatalogButtons(args catalogButtonsArgs) tg.InlineKeyboardMarkup {
 func prepareAfterPaidButtons(shortOrderId string) tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData(fmt.Sprintf("Заказ %s оплачен ✅", shortOrderId), strconv.Itoa(mockCallback)),
+			tg.NewInlineKeyboardButtonData(fmt.Sprintf("Заказ %s оплачен ✅", shortOrderId), strconv.Itoa(noopCallback)),
 		))
 }
 
 func locationCalculator() tg.InlineKeyboardMarkup {
-
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Ижевск", strconv.Itoa(izhLocationCalculatorCallback)),
@@ -357,5 +379,60 @@ func calculateMore() tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Посчитать еще!", strconv.Itoa(calculateMoreCallback)),
+		),
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Добавить в корзину", strconv.Itoa(addPositionCallback)),
+		),
+	)
+}
+
+func prepareFaqButtons() tg.InlineKeyboardMarkup {
+	questionsByLevel := questions
+
+	_ = questionsByLevel[2]
+	dinoq, bossq, masterq := questionsByLevel[0], questionsByLevel[1], questionsByLevel[2]
+
+	// noop buttons
+	dinoNoOp := tg.NewInlineKeyboardButtonData("Уровень «динозавр» 🦖", strconv.Itoa(noopCallback))
+	bossNoOp := tg.NewInlineKeyboardButtonData("Уровень «boss of the gym» 🐅", strconv.Itoa(noopCallback))
+	masterNoOp := tg.NewInlineKeyboardButtonData("Уровень «dungeon master» 🦈", strconv.Itoa(noopCallback))
+
+	// prepare buttons
+
+	// firstly goes noop, then n questions
+	var rows [][]tg.InlineKeyboardButton
+
+	questionIndexForCallback := 1 + faqOffset
+
+	// row 1
+	rows = append(rows, tg.NewInlineKeyboardRow(dinoNoOp))
+	for _, q := range dinoq {
+		rows = append(rows, tg.NewInlineKeyboardRow(tg.NewInlineKeyboardButtonData(q, strconv.Itoa(questionIndexForCallback))))
+		questionIndexForCallback++
+	}
+	rows = append(rows, tg.NewInlineKeyboardRow(tg.NewInlineKeyboardButtonData(" ", strconv.Itoa(noopCallback))))
+
+	// row 2
+	rows = append(rows, tg.NewInlineKeyboardRow(bossNoOp))
+	for _, q := range bossq {
+		rows = append(rows, tg.NewInlineKeyboardRow(tg.NewInlineKeyboardButtonData(q, strconv.Itoa(questionIndexForCallback))))
+		questionIndexForCallback++
+	}
+	rows = append(rows, tg.NewInlineKeyboardRow(tg.NewInlineKeyboardButtonData(" ", strconv.Itoa(noopCallback))))
+
+	// row 3
+	rows = append(rows, tg.NewInlineKeyboardRow(masterNoOp))
+	for _, q := range masterq {
+		rows = append(rows, tg.NewInlineKeyboardRow(tg.NewInlineKeyboardButtonData(q, strconv.Itoa(questionIndexForCallback))))
+		questionIndexForCallback++
+	}
+
+	return tg.NewInlineKeyboardMarkup(rows...)
+}
+
+func askMoreFaq() tg.InlineKeyboardMarkup {
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Жми", strconv.Itoa(menuFaqCallback)),
 		))
 }

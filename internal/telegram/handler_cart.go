@@ -47,7 +47,7 @@ func (h *handler) EditCart(ctx context.Context, chatID int64, previewCartMsgID i
 		return fmt.Errorf("customerRepo.Update: %w", err)
 	}
 	buttons := prepareEditCartButtons(len(customer.Cart), previewCartMsgID)
-	return h.sendWithKeyboard(chatID, "Выберите номер позиции чтобы удалить её.\nПо клику на кнопку позиция изчезнет из вашей корзины!", buttons)
+	return h.sendWithKeyboard(chatID, editPositionTemplate, buttons)
 }
 
 func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callbackData int, originalMsgID, cartPreviewMsgID int) error {
@@ -112,7 +112,7 @@ func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callback
 		return err
 	}
 
-	return h.cleanSend(tg.NewMessage(chatID, fmt.Sprintf("Позиция %d успешно удалена. Корзина сверху обновлена ✅", buttonClicked)))
+	return h.sendMessage(chatID, fmt.Sprintf("Позиция %d успешно удалена. Корзина сверху обновлена ✅", buttonClicked))
 }
 
 func (h *handler) emptyCart(chatID int64) error {

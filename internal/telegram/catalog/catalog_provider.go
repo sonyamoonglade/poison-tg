@@ -66,6 +66,9 @@ func (c *CatalogProvider) LoadFirst() domain.CatalogItem {
 }
 
 func (c *CatalogProvider) LoadAt(offset uint) domain.CatalogItem {
+	if len(c.items) == 0 {
+		return domain.CatalogItem{}
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	_ = c.items[offset]
