@@ -8,6 +8,5 @@ run:
 unit-test:
 	go test -count=2 -short ./...
 
-ci:
-	unit-test
+ci: unit-test
 	go vet ./...

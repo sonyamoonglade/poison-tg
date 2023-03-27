@@ -126,7 +126,7 @@ func run() error {
 		return err
 	}
 
-	exitChan := make(chan os.Signal)
+	exitChan := make(chan os.Signal, 1)
 	signal.Notify(exitChan, os.Interrupt, syscall.SIGINT)
 
 	// Graceful shutdown
