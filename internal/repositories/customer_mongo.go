@@ -28,6 +28,14 @@ func (c *customerRepo) Save(ctx context.Context, customer domain.Customer) error
 	}
 	return nil
 }
+
+func (c *customerRepo) NullifyCatalogOffsets(ctx context.Context) error {
+	filter := bson.D{}
+	update := bson.M{"$set": bson.M{"catalogOffset": 0}}
+	_, err := c.customers.UpdateMany(ctx, filter, update)
+	return err
+}
+
 func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID, dto dto.UpdateCustomerDTO) error {
 	update := bson.M{}
 	if dto.Cart != nil {
@@ -42,7 +50,9 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 		update["state"] = *dto.State
 	}
 	if dto.LastPosition != nil {
-		dto.LastPosition.PositionID = primitive.NewObjectID()
+		if dto.LastPosition.PositionID.IsZero() {
+			dto.LastPosition.PositionID = primitive.NewObjectID()
+		}
 		update["lastEditPosition"] = *dto.LastPosition
 	}
 
@@ -63,12 +73,7 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 		}
 	}
 	if dto.CalculatorMeta != nil {
-		if dto.CalculatorMeta.Location != nil {
-			update["calculatorMeta.location"] = dto.CalculatorMeta.Location
-		}
-		if dto.CalculatorMeta.NextOrderType != nil {
-			update["calculatorMeta.nextOrderType"] = dto.CalculatorMeta.NextOrderType
-		}
+		update["calculatorMeta"] = dto.CalculatorMeta
 	}
 
 	if dto.CatalogOffset != nil {

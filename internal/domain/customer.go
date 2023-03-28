@@ -13,41 +13,34 @@ var (
 	StateDefault                       = State{0}
 	StateWaitingForOrderType           = State{1}
 	StateWaitingForLocation            = State{2}
-	StateWaitingForCalculatorOrderType = State{3}
-	StateWaitingForCalculatorLocation  = State{4}
-	StateWaitingForSize                = State{5}
-	StateWaitingForButton              = State{6}
-	StateWaitingForPrice               = State{7}
-	StateWaitingForLink                = State{8}
-	StateWaitingForCartPositionToEdit  = State{9}
-	StateWaitingForCalculatorInput     = State{10}
-	StateWaitingForFIO                 = State{11}
-	StateWaitingForPhoneNumber         = State{12}
-	StateWaitingForDeliveryAddress     = State{13}
+	StateWaitingForCategory            = State{3}
+	StateWaitingForCalculatorCategory  = State{4}
+	StateWaitingForCalculatorOrderType = State{5}
+	StateWaitingForCalculatorLocation  = State{6}
+	StateWaitingForSize                = State{7}
+	StateWaitingForButton              = State{8}
+	StateWaitingForPrice               = State{9}
+	StateWaitingForLink                = State{10}
+	StateWaitingForCartPositionToEdit  = State{11}
+	StateWaitingForCalculatorInput     = State{12}
+	StateWaitingForFIO                 = State{13}
+	StateWaitingForPhoneNumber         = State{14}
+	StateWaitingForDeliveryAddress     = State{15}
 )
 
 var (
 	ErrCustomerNotFound = errors.New("customer not found")
 )
 
-type OrderType int
-
-const (
-	OrderTypeExpress OrderType = iota + 1
-	OrderTypeNormal
-)
-
-type Location int
-
-const (
-	LocationSPB Location = iota + 1
-	LocationIZH
-	LocationOther
-)
-
 type Meta struct {
 	NextOrderType *OrderType `json:"nextOrderType" bson:"nextOrderType"`
 	Location      *Location  `json:"location" bson:"location"`
+}
+
+type CalculatorMeta struct {
+	NextOrderType *OrderType `json:"nextOrderType" bson:"nextOrderType"`
+	Location      *Location  `json:"location" bson:"location"`
+	Category      *Category  `bson:"category"`
 }
 
 type Customer struct {
@@ -59,7 +52,7 @@ type Customer struct {
 	TgState          State              `json:"state" bson:"state"`
 	Cart             Cart               `json:"cart" bson:"cart"`
 	Meta             Meta               `json:"meta" bson:"meta"`
-	CalculatorMeta   Meta               `json:"calculatorMeta" bson:"calculatorMeta"`
+	CalculatorMeta   CalculatorMeta     `json:"calculatorMeta" bson:"calculatorMeta"`
 	CatalogOffset    uint               `json:"catalogOffset" bson:"catalogOffset"`
 	LastEditPosition *Position          `json:"lastEditPosition,omitempty" bson:"lastEditPosition"`
 }
@@ -87,10 +80,13 @@ func (c *Customer) UpdateLastEditPositionSize(s string) {
 	c.LastEditPosition.Size = s
 }
 
+func (c *Customer) UpdateLastEditPositionCategory(cat Category) {
+	c.LastEditPosition.Category = cat
+}
+
 func (c *Customer) UpdateLastEditPositionPrice(priceRub uint64, priceYuan uint64) {
 	c.LastEditPosition.PriceRUB = priceRub
 	c.LastEditPosition.PriceYUAN = priceYuan
-
 }
 
 func (c *Customer) UpdateLastEditPositionLink(link string) {
@@ -109,6 +105,9 @@ func (c *Customer) UpdateMetaLocation(loc Location) {
 	c.Meta.Location = &loc
 }
 
+func (c *Customer) UpdateCalculatorMetaCategory(cat Category) {
+	c.CalculatorMeta.Category = &cat
+}
 func (c *Customer) UpdateCalculatorMetaOrderType(typ OrderType) {
 	c.CalculatorMeta.NextOrderType = &typ
 }
@@ -125,14 +124,8 @@ func (c *Customer) NullifyCatalogOffset() {
 	c.CatalogOffset = 0
 }
 
-func MakeUsername(firstName string, lastName string, username string) string {
-	var out string
-	if firstName == "" || lastName == "" {
-		out = username
-	} else if firstName != "" && lastName != "" {
-		out = firstName + " " + lastName
-	}
-	return out
+func MakeUsername(username string) string {
+	return username
 }
 
 func IsValidFullName(fullName string) bool {
@@ -143,9 +136,12 @@ func IsValidFullName(fullName string) bool {
 	return true
 }
 
-var r = regexp.MustCompile(`(?m)^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$`)
+var r = regexp.MustCompile(`^(8|7)((\d{10})|(\s\(\d{3}\)\s\d{3}\s\d{2}\s\d{2}))`)
 
 func IsValidPhoneNumber(phoneNumber string) bool {
+	if len(phoneNumber) != 11 {
+		return false
+	}
 	return r.MatchString(phoneNumber)
 }
 

@@ -5,16 +5,24 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/sonyamoonglade/poison-tg/config"
+	"github.com/sonyamoonglade/poison-tg/internal/api"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories"
-	"github.com/sonyamoonglade/poison-tg/internal/services"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram/catalog"
 	"github.com/sonyamoonglade/poison-tg/pkg/database"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -53,12 +61,8 @@ func run() error {
 		catalogProvider.Load(items)
 	}
 
-	customerRepo := repositories.NewCustomerRepo(mongo.Collection("customers"))
-	orderRepo := repositories.NewOrderRepo(mongo.Collection("orders"))
-	businessRepo := repositories.NewBusinessRepo(mongo.Collection("business"))
-	catalogRepo := repositories.NewCatalogRepo(mongo.Collection("catalog"), updateOnChange)
-
-	initialCatalog, err := catalogRepo.GetCatalog(ctx)
+	repos := repositories.NewRepositories(mongo, updateOnChange)
+	initialCatalog, err := repos.Catalog.GetCatalog(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting initial catalog: %w", err)
 	}
@@ -75,28 +79,69 @@ func run() error {
 	if err := telegram.LoadTemplates("templates.json"); err != nil {
 		return fmt.Errorf("can't load templates: %w", err)
 	}
-
-	yuanService := services.NewYuanService(new(rateProvider))
+	rateProvider := api.NewRateProvider()
 
 	handler := telegram.NewHandler(bot,
-		customerRepo,
-		businessRepo,
-		orderRepo,
-		yuanService,
+		repos,
+		rateProvider,
 		catalogProvider)
 
 	router := telegram.NewRouter(bot.GetUpdates(),
 		handler,
-		customerRepo,
+		repos.Customer,
 		cfg.Bot.HandlerTimeout)
 
-	return router.Bootstrap()
-}
+	// HTTP api
+	app := fiber.New(fiber.Config{
+		Immutable: true,
+		Prefork:   false,
+		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+			logger.Get().Error("error in api endpoint", zap.Error(err))
+			return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		},
+	})
 
-type rateProvider struct{}
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowHeaders: "*",
+	}))
 
-func (r *rateProvider) GetYuanRate() (float64, error) {
-	return 11.6, nil
+	app.Use(func(c *fiber.Ctx) error {
+		logger.Get().Debug("new api request",
+			zap.String("url", string(c.Request().RequestURI())),
+		)
+		return c.Next()
+	})
+
+	apiController := api.NewHandler(repos.Catalog, repos.Order, repos.Customer, rateProvider)
+	apiController.RegisterRoutes(app)
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		if err := app.Listen(":" + cfg.App.Port); err != nil {
+			logger.Get().Error("http server error", zap.Error(err))
+		}
+		wg.Done()
+	}()
+	logger.Get().Info("http api server is up")
+
+	if err := router.Bootstrap(); err != nil {
+		return err
+	}
+
+	exitChan := make(chan os.Signal, 1)
+	signal.Notify(exitChan, os.Interrupt, syscall.SIGINT)
+
+	// Graceful shutdown
+	<-exitChan
+	if err := app.Shutdown(); err != nil {
+		return fmt.Errorf("api shutdown: %w", err)
+	}
+
+	wg.Wait()
+	return mongo.Close(context.Background())
 }
 
 func readCmdArgs() (string, string, bool, bool) {

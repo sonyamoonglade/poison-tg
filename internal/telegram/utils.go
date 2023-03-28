@@ -31,16 +31,8 @@ func (h *handler) checkRequiredState(ctx context.Context, want domain.State, tel
 	return nil
 }
 
-func (h *handler) deleteUnusedMedia(offset int, chatID int64, msgIDs []int) error {
-	// Delete the rest of medias
-	for i := offset; i < len(msgIDs); i++ {
-		del := tg.NewDeleteMessage(chatID, msgIDs[i])
-		_, err := h.b.client.Request(del)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (h *handler) sendMessage(chatID int64, text string) error {
+	return h.cleanSend(tg.NewMessage(chatID, text))
 }
 
 func makeThumbnails(caption string, urls ...string) []interface{} {

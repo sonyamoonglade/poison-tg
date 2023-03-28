@@ -10,6 +10,14 @@ const (
 	Button95              = "95 БУ"
 )
 
+type Category string
+
+const (
+	CategoryLight Category = "Легкая одежда"
+	CategoryHeavy          = "Тяжелая одежда"
+	CategoryOther          = "Аксессуары и др."
+)
+
 type Position struct {
 	PositionID primitive.ObjectID `json:"positionId,omitempty" bson:"_id,omitempty"`
 	ShopLink   string             `json:"shopLink" bson:"shopLink"`
@@ -17,6 +25,7 @@ type Position struct {
 	PriceYUAN  uint64             `json:"priceYuan" bson:"priceYuan"`
 	Button     Button             `json:"button" bson:"button"`
 	Size       string             `json:"size" bson:"size"`
+	Category   Category           `json:"category" bson:"category"`
 }
 
 func NewEmptyPosition() Position {

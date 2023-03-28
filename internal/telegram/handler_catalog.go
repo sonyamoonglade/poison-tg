@@ -2,12 +2,85 @@ package telegram
 
 import (
 	"context"
+	"reflect"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
 	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 )
+
+func (h *handler) Catalog(ctx context.Context, chatID int64) error {
+	var (
+		telegramID = chatID
+		first      bool
+	)
+
+	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+
+	if err := h.sendMessage(chatID, getCatalog(*customer.Username)); err != nil {
+		return err
+	}
+
+	// Load appropriate item
+	item := h.catalogProvider.LoadAt(customer.CatalogOffset)
+
+	thumbnails := functools.Map(func(url string) interface{} {
+		thumbnail := tg.NewInputMediaPhoto(tg.FileURL(url))
+		if !first {
+			// add caption to first element
+			thumbnail.Caption = item.GetCaption()
+			first = true
+		}
+		thumbnail.ParseMode = parseModeHTML
+		return thumbnail
+	}, item.ImageURLs)
+
+	group := tg.NewMediaGroup(chatID, thumbnails)
+
+	// Sends thumnails with caption
+	sentMsgs, err := h.b.client.SendMediaGroup(group)
+	if err != nil {
+		return err
+	}
+
+	msgIDs := functools.Map(func(m tg.Message) int {
+		return m.MessageID
+	}, sentMsgs)
+
+	// Prepare buttons for controlling prev, next
+	var (
+		currentOffset = customer.CatalogOffset
+		hasNext       = h.catalogProvider.HasNext(currentOffset)
+		hasPrev       = h.catalogProvider.HasPrev(currentOffset)
+	)
+
+	btnArgs := catalogButtonsArgs{
+		hasNext: hasNext,
+		hasPrev: hasPrev,
+		msgIDs:  msgIDs,
+	}
+
+	if hasNext {
+		next := h.catalogProvider.LoadNext(currentOffset)
+		btnArgs.nextTitle = next.Title
+	}
+
+	if hasPrev {
+		prev := h.catalogProvider.LoadPrev(currentOffset)
+		btnArgs.prevTitle = prev.Title
+	}
+
+	if !hasPrev && !hasNext {
+		return nil
+	}
+
+	buttons := prepareCatalogButtons(btnArgs)
+	return h.sendWithKeyboard(chatID, "Кнопки для пролистывания каталога", buttons)
+}
 
 // No need to call h.catalogProvider.HasNext. See h.Catalog impl
 func (h *handler) HandleCatalogNext(ctx context.Context, chatID int64, controlButtonsMsgID int64, thumbnailMsgIDs []int) error {
@@ -39,6 +112,10 @@ func (h *handler) HandleCatalogPrev(ctx context.Context, chatID int64, controlBu
 }
 
 func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumbnailMsgIDs []int, controlButtonsMsgID int64, customer domain.Customer, item domain.CatalogItem) error {
+	// Null
+	if reflect.DeepEqual(domain.CatalogItem{}, item) {
+		return nil
+	}
 	// Get next item images
 	var first bool
 	thumbnails := functools.Map(func(url string) interface{} {
@@ -48,6 +125,7 @@ func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumbnailMsgI
 			thumbnail.Caption = item.GetCaption()
 			first = true
 		}
+		thumbnail.ParseMode = parseModeHTML
 		return thumbnail
 	}, item.ImageURLs)
 

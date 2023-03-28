@@ -10,7 +10,7 @@ type UpdateCustomerDTO struct {
 	Username       *string
 	FullName       *string
 	Meta           *domain.Meta
-	CalculatorMeta *domain.Meta
+	CalculatorMeta *domain.CalculatorMeta
 	PhoneNumber    *string
 	Cart           *domain.Cart
 	State          *domain.State
@@ -20,4 +20,14 @@ type UpdateCustomerDTO struct {
 type UpdateItemDTO struct {
 	RankUPItemID   primitive.ObjectID
 	RankDownItemID primitive.ObjectID
+}
+
+type AddCommentDTO struct {
+	OrderID primitive.ObjectID
+	Comment string
+}
+
+type ChangeOrderStatusDTO struct {
+	OrderID   primitive.ObjectID
+	NewStatus domain.Status
 }

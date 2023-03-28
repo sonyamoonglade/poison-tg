@@ -5,118 +5,8 @@ import (
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
-	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
 	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 )
-
-func (h *handler) askForOrderType(ctx context.Context, chatID int64) error {
-	text := "Выбери тип доставки (время экспресс перевозки в среднем составляет 4 дня из Китая в СПб, обычная перевозка составляет 8-15 дней)"
-	return h.sendWithKeyboard(chatID, text, orderTypeButtons)
-}
-
-func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error {
-	var (
-		telegramID = chatID
-		isExpress  = typ == domain.OrderTypeExpress
-	)
-
-	if err := h.checkRequiredState(ctx, domain.StateWaitingForOrderType, chatID); err != nil {
-		return err
-	}
-
-	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
-	if err != nil {
-		return err
-	}
-
-	customer.UpdateMetaOrderType(typ)
-	if isExpress {
-		// If order type is express then it's no matter which location user would put,
-		// so whatever
-		customer.UpdateMetaLocation(domain.LocationOther)
-		// skip location state
-		customer.TgState = domain.StateWaitingForSize
-	} else {
-		customer.TgState = domain.StateWaitingForLocation
-	}
-
-	updateDTO := dto.UpdateCustomerDTO{
-		Meta: &domain.Meta{
-			NextOrderType: customer.Meta.NextOrderType,
-			Location:      customer.Meta.Location,
-		},
-		State: &customer.TgState,
-	}
-
-	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
-		return err
-	}
-
-	var resp = "Тип заказа: "
-	switch isExpress {
-	case true:
-		resp += "Экспресс"
-		break
-	case false:
-		resp += "Обычный"
-		break
-	}
-	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
-		return err
-	}
-
-	if isExpress {
-		return h.addPosition(ctx, chatID)
-	}
-
-	return h.askForLocation(ctx, chatID)
-}
-
-func (h *handler) askForLocation(ctx context.Context, chatID int64) error {
-	text := "Из какого ты города?"
-	return h.sendWithKeyboard(chatID, text, locationButtons)
-}
-
-func (h *handler) HandleLocationInput(ctx context.Context, chatID int64, loc domain.Location) error {
-	var telegramID = chatID
-
-	if err := h.checkRequiredState(ctx, domain.StateWaitingForLocation, chatID); err != nil {
-		return err
-	}
-
-	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
-	if err != nil {
-		return err
-	}
-
-	customer.UpdateMetaLocation(loc)
-
-	updateDTO := dto.UpdateCustomerDTO{
-		Meta: &customer.Meta,
-	}
-
-	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
-		return err
-	}
-	var resp = "Выбран: "
-	switch loc {
-	case domain.LocationSPB:
-		resp += "Питер"
-		break
-	case domain.LocationIZH:
-		resp += "Ижевск"
-		break
-	case domain.LocationOther:
-		resp += "Другой"
-		break
-	}
-
-	if err := h.cleanSend(tg.NewMessage(chatID, resp)); err != nil {
-		return err
-	}
-
-	return h.addPosition(ctx, telegramID)
-}
 
 func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error {
 	var (
@@ -148,7 +38,7 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 
 	// If cart is not empty then skip location and order type ask
 	if len(customer.Cart) > 0 {
-		return h.addPosition(ctx, chatID)
+		return h.askForSize(ctx, chatID)
 	}
 
 	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForOrderType); err != nil {

@@ -25,6 +25,10 @@ type AppConfig struct {
 		// HandlerTimeout
 		HandlerTimeout time.Duration
 	}
+
+	App struct {
+		Port string
+	}
 }
 
 func ReadConfig(path string) (AppConfig, error) {
@@ -45,14 +49,19 @@ func ReadConfig(path string) (AppConfig, error) {
 		return AppConfig{}, fmt.Errorf("missing MONGO_URI env")
 	}
 
-	botToken := os.Getenv("BOT_TOKEN")
-	if botToken == "" {
-		return AppConfig{}, fmt.Errorf("missing BOT_TOKEN env")
-	}
-
 	dbname := os.Getenv("DB_NAME")
 	if dbname == "" {
 		return AppConfig{}, fmt.Errorf("missing DB_NAME env")
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		return AppConfig{}, fmt.Errorf("missing PORT env")
+	}
+
+	botToken := os.Getenv("BOT_TOKEN")
+	if botToken == "" {
+		return AppConfig{}, fmt.Errorf("missing BOT_TOKEN env")
 	}
 
 	handlerTimeout := viper.GetInt("telegram.handler_timeout")
@@ -74,6 +83,11 @@ func ReadConfig(path string) (AppConfig, error) {
 		}{
 			Token:          botToken,
 			HandlerTimeout: time.Duration(handlerTimeout) * time.Second,
+		},
+		App: struct {
+			Port string
+		}{
+			Port: port,
 		},
 	}, nil
 }
