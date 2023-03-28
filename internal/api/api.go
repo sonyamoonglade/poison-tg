@@ -27,15 +27,15 @@ type RateProvider struct {
 
 func NewRateProvider() *RateProvider {
 	return &RateProvider{
-		CurrRate: 11.8,
 		mu:       new(sync.RWMutex),
+		CurrRate: 11.96,
 	}
 }
 
-func (r *RateProvider) GetYuanRate() (float64, error) {
+func (r *RateProvider) GetYuanRate() float64 {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.CurrRate, nil
+	return r.CurrRate
 }
 func (r *RateProvider) UpdateRate(rate float64) {
 	r.mu.Lock()
@@ -283,11 +283,7 @@ func (h *Handler) delete(c *fiber.Ctx) error {
 }
 
 func (h *Handler) currentRate(c *fiber.Ctx) error {
-	rate, err := h.rateProvider.GetYuanRate()
-	if err != nil {
-		return err
-	}
 	return c.Status(http.StatusOK).JSON(fiber.Map{
-		"rate": rate,
+		"rate": h.rateProvider.GetYuanRate(),
 	})
 }

@@ -50,7 +50,9 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 		update["state"] = *dto.State
 	}
 	if dto.LastPosition != nil {
-		dto.LastPosition.PositionID = primitive.NewObjectID()
+		if dto.LastPosition.PositionID.IsZero() {
+			dto.LastPosition.PositionID = primitive.NewObjectID()
+		}
 		update["lastEditPosition"] = *dto.LastPosition
 	}
 
@@ -71,12 +73,7 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 		}
 	}
 	if dto.CalculatorMeta != nil {
-		if dto.CalculatorMeta.Location != nil {
-			update["calculatorMeta.location"] = dto.CalculatorMeta.Location
-		}
-		if dto.CalculatorMeta.NextOrderType != nil {
-			update["calculatorMeta.nextOrderType"] = dto.CalculatorMeta.NextOrderType
-		}
+		update["calculatorMeta"] = dto.CalculatorMeta
 	}
 
 	if dto.CatalogOffset != nil {

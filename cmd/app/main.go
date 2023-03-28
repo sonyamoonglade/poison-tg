@@ -18,7 +18,6 @@ import (
 	"github.com/sonyamoonglade/poison-tg/internal/api"
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories"
-	"github.com/sonyamoonglade/poison-tg/internal/services"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram/catalog"
 	"github.com/sonyamoonglade/poison-tg/pkg/database"
@@ -81,11 +80,10 @@ func run() error {
 		return fmt.Errorf("can't load templates: %w", err)
 	}
 	rateProvider := api.NewRateProvider()
-	yuanService := services.NewYuanService(rateProvider)
 
 	handler := telegram.NewHandler(bot,
 		repos,
-		yuanService,
+		rateProvider,
 		catalogProvider)
 
 	router := telegram.NewRouter(bot.GetUpdates(),
@@ -99,7 +97,7 @@ func run() error {
 		Prefork:   false,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
 			logger.Get().Error("error in api endpoint", zap.Error(err))
-			return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{
+			return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		},
@@ -109,6 +107,13 @@ func run() error {
 		AllowOrigins: "*",
 		AllowHeaders: "*",
 	}))
+
+	app.Use(func(c *fiber.Ctx) error {
+		logger.Get().Debug("new api request",
+			zap.String("url", string(c.Request().RequestURI())),
+		)
+		return c.Next()
+	})
 
 	apiController := api.NewHandler(repos.Catalog, repos.Order, repos.Customer, rateProvider)
 	apiController.RegisterRoutes(app)

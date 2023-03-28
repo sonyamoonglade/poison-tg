@@ -10,7 +10,7 @@ type UpdateCustomerDTO struct {
 	Username       *string
 	FullName       *string
 	Meta           *domain.Meta
-	CalculatorMeta *domain.Meta
+	CalculatorMeta *domain.CalculatorMeta
 	PhoneNumber    *string
 	Cart           *domain.Cart
 	State          *domain.State

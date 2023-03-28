@@ -6,7 +6,6 @@ import (
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories"
-	"github.com/sonyamoonglade/poison-tg/internal/services"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram/catalog"
 )
 
@@ -15,24 +14,28 @@ var (
 	ErrInvalidPriceInput = errors.New("invalid price input")
 )
 
+type RateProvider interface {
+	GetYuanRate() float64
+}
+
 type handler struct {
 	b               *Bot
 	customerRepo    repositories.Customer
 	orderRepo       repositories.Order
-	yuanService     services.Yuan
+	rateProvider    RateProvider
 	catalogProvider *catalog.CatalogProvider
 }
 
 func NewHandler(bot *Bot,
 	repositories repositories.Repositories,
-	yuanService services.Yuan,
+	rateProvider RateProvider,
 	catalogProvider *catalog.CatalogProvider) *handler {
 	return &handler{
 		b:               bot,
 		customerRepo:    repositories.Customer,
 		orderRepo:       repositories.Order,
-		yuanService:     yuanService,
 		catalogProvider: catalogProvider,
+		rateProvider:    rateProvider,
 	}
 }
 

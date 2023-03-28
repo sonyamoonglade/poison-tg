@@ -128,6 +128,7 @@ func (h *handler) prepareCartPreview(cart domain.Cart, isExpressOrder bool) stri
 			n:         n + 1,
 			link:      cartItem.ShopLink,
 			size:      cartItem.Size,
+			category:  string(cartItem.Category),
 			priceRub:  cartItem.PriceRUB,
 			priceYuan: cartItem.PriceYUAN,
 		})

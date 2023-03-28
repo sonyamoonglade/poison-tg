@@ -2,9 +2,25 @@ package domain
 
 import (
 	"errors"
+	"math"
 
 	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+type OrderType int
+
+const (
+	OrderTypeExpress OrderType = iota + 1
+	OrderTypeNormal
+)
+
+type Location int
+
+const (
+	LocationSPB Location = iota + 1
+	LocationIZH
+	LocationOther
 )
 
 type Status int
@@ -79,4 +95,71 @@ func NewOrder(customer Customer, deliveryAddress string, isExpress bool, shortID
 func IsValidOrderStatus(s Status) bool {
 	_, ok := StatusTexts[s]
 	return ok
+}
+
+type formula func(x uint64, rate float64) (rub uint64)
+
+type FormulaMap = map[OrderType]map[Location]map[Category]formula
+
+var formulas = FormulaMap{
+	OrderTypeExpress: {
+		LocationOther: {
+			CategoryOther: expressfn(0.5, 764),
+			CategoryLight: expressfn(1.6, 764),
+			CategoryHeavy: expressfn(2.6, 764),
+		},
+		LocationIZH: {
+			CategoryOther: expressfn(0.5, 764),
+			CategoryLight: expressfn(1.6, 764),
+			CategoryHeavy: expressfn(2.6, 764),
+		},
+		LocationSPB: {
+			CategoryOther: expressfn(0.5, 764),
+			CategoryLight: expressfn(1.6, 764),
+			CategoryHeavy: expressfn(2.6, 764),
+		},
+	},
+	OrderTypeNormal: {
+		LocationOther: {
+			CategoryOther: normalfn(0.5, 764),
+			CategoryLight: normalfn(1.6, 764),
+			CategoryHeavy: normalfn(2.6, 764),
+		},
+		LocationIZH: {
+			CategoryOther: normalfn(0.5, 1075),
+			CategoryLight: normalfn(1.6, 1075),
+			CategoryHeavy: normalfn(2.6, 1075),
+		},
+		LocationSPB: {
+			CategoryOther: normalfn(0.5, 1075),
+			CategoryLight: normalfn(1.6, 1075),
+			CategoryHeavy: normalfn(2.6, 1075),
+		},
+	},
+}
+
+func expressfn(kg_mul float64, fee float64) formula {
+	return func(x uint64, rate float64) (rub uint64) {
+		v := (float64(x)*rate)*1.09 + (170.0 * kg_mul * rate) + fee
+		return uint64(math.Ceil(v))
+	}
+}
+
+func normalfn(kg_mul float64, fee float64) formula {
+	return func(x uint64, rate float64) (rub uint64) {
+		v := (float64(x)*rate)*1.09 + (50.0 * kg_mul * rate) + fee
+		return uint64(math.Ceil(v))
+	}
+}
+
+type ConvertYuanArgs struct {
+	X         uint64
+	Rate      float64
+	OrderType OrderType
+	Location  Location
+	Category  Category
+}
+
+func ConvertYuan(args ConvertYuanArgs) (rub uint64) {
+	return formulas[args.OrderType][args.Location][args.Category](args.X, args.Rate)
 }

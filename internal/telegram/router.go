@@ -36,6 +36,8 @@ type RouteHandler interface {
 	AskForCalculatorOrderType(ctx context.Context, chatID int64) error
 	HandleCalculatorOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error
 	HandleCalculatorLocationInput(ctx context.Context, chatID int64, loc domain.Location) error
+	HandleCalculatorCategoryInput(ctx context.Context, chatID int64, cat domain.Category) error
+	AskForCalculatorCategory(ctx context.Context, chatID int64) error
 	HandleCalculatorInput(ctx context.Context, m *tg.Message) error
 
 	GetCart(ctx context.Context, chatID int64) error
@@ -47,6 +49,7 @@ type RouteHandler interface {
 
 	HandleLocationInput(ctx context.Context, chatID int64, loc domain.Location) error
 	HandleOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error
+	HandleCategoryInput(ctx context.Context, chatID int64, cat domain.Category) error
 
 	// StartMakeOrderGuide is initial guide handler
 	StartMakeOrderGuide(ctx context.Context, m *tg.Message) error
@@ -290,6 +293,20 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeExpress)
 	case orderTypeExpressCalculatorCallback:
 		return r.h.HandleCalculatorOrderTypeInput(ctx, chatID, domain.OrderTypeExpress)
+	case categoryLightCallback:
+		return r.h.HandleCategoryInput(ctx, chatID, domain.CategoryLight)
+	case categoryLightCalculatorCallback:
+		return r.h.HandleCalculatorCategoryInput(ctx, chatID, domain.CategoryLight)
+	case categoryHeavyCallback:
+		return r.h.HandleCategoryInput(ctx, chatID, domain.CategoryHeavy)
+	case categoryHeavyCalculatorCallback:
+		return r.h.HandleCalculatorCategoryInput(ctx, chatID, domain.CategoryHeavy)
+	case categoryOtherCallback:
+		return r.h.HandleCategoryInput(ctx, chatID, domain.CategoryOther)
+	case categoryOtherCalculatorCallback:
+		return r.h.HandleCalculatorCategoryInput(ctx, chatID, domain.CategoryOther)
+	case selectCategoryAgainCallback:
+		return r.h.AskForCalculatorCategory(ctx, chatID)
 	case paymentCallback:
 		// stringData in this case is orderShortID
 		return r.h.HandlePayment(ctx, stringData, c)

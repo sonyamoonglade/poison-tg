@@ -30,22 +30,19 @@ func (h *handler) Start(ctx context.Context, m *tg.Message) error {
 		}
 	}
 
-	if err := h.sendWithKeyboard(chatID, getStartTemplate(username), initialMenuKeyboard); err != nil {
-		return err
-	}
+	return h.sendWithKeyboard(chatID, getStartTemplate(username), initialMenuKeyboard)
 
-	yuanRate, err := h.yuanService.GetRate()
-	if err != nil {
-		return err
-	}
-
-	return h.sendMessage(chatID, fmt.Sprintf("Курс юаня на сегодня: %.2f ₽", yuanRate))
 }
 
 func (h *handler) Menu(ctx context.Context, chatID int64) error {
 	if err := h.customerRepo.UpdateState(ctx, chatID, domain.StateDefault); err != nil {
 		return err
 	}
+
+	if err := h.sendMessage(chatID, fmt.Sprintf("Курс юаня на сегодня: %.2f ₽", h.rateProvider.GetYuanRate())); err != nil {
+		return err
+	}
+
 	return h.sendWithKeyboard(chatID, getTemplate().Menu, menuButtons)
 }
 
@@ -93,6 +90,7 @@ func (h *handler) MyOrders(ctx context.Context, chatID int64) error {
 				n:         nCartItem + 1,
 				link:      cartItem.ShopLink,
 				size:      cartItem.Size,
+				category:  string(cartItem.Category),
 				priceRub:  cartItem.PriceRUB,
 				priceYuan: cartItem.PriceYUAN,
 			})

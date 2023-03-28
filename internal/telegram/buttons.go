@@ -47,6 +47,14 @@ const (
 	orderTypeNormalCalculatorCallback
 	orderTypeExpressCallback
 	orderTypeExpressCalculatorCallback
+	categoryLightCallback
+	categoryLightCalculatorCallback
+	categoryHeavyCallback
+	categoryHeavyCalculatorCallback
+	categoryOtherCallback
+	categoryOtherCalculatorCallback
+	selectCategoryAgainCallback
+
 	paymentCallback
 )
 
@@ -59,19 +67,6 @@ const (
 const (
 	catalogPrevCallback = iota + 1
 	catalogNextCallback
-)
-
-const (
-	faqQuestion1Callback = iota + 1
-	faqQuestion2Callback
-	faqQuestion3Callback
-	faqQuestion4Callback
-	faqQuestion5Callback
-	faqQuestion6Callback
-	faqQuestion7Callback
-	faqQuestion8Callback
-	faqQuestion9Callback
-	faqQuestion10Callback
 )
 
 var (
@@ -87,6 +82,8 @@ var (
 	orderTypeButtons                    = orderType()
 	locationCalculatorButtons           = locationCalculator()
 	orderTypeCalculatorButtons          = orderTypeCalculator()
+	categoryButtons                     = category(false)
+	categoryCalculatorButtons           = category(true)
 	calculateMoreButtons                = calculateMore()
 	askMoreFaqButtons                   = askMoreFaq()
 )
@@ -381,7 +378,10 @@ func calculateMore() tg.InlineKeyboardMarkup {
 			tg.NewInlineKeyboardButtonData("Посчитать еще!", strconv.Itoa(calculateMoreCallback)),
 		),
 		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Добавить в корзину", strconv.Itoa(addPositionCallback)),
+			tg.NewInlineKeyboardButtonData("Другая категория", strconv.Itoa(selectCategoryAgainCallback)),
+		),
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Добавить позицию", strconv.Itoa(addPositionCallback)),
 		),
 	)
 }
@@ -435,4 +435,31 @@ func askMoreFaq() tg.InlineKeyboardMarkup {
 		tg.NewInlineKeyboardRow(
 			tg.NewInlineKeyboardButtonData("Жми", strconv.Itoa(menuFaqCallback)),
 		))
+}
+
+func category(forCalculator bool) tg.InlineKeyboardMarkup {
+	if forCalculator {
+		return tg.NewInlineKeyboardMarkup(
+			tg.NewInlineKeyboardRow(
+				tg.NewInlineKeyboardButtonData("Парфюм/аксессуары/косметика ~ 0.5 кг", strconv.Itoa(categoryOtherCalculatorCallback)),
+			),
+			tg.NewInlineKeyboardRow(
+				tg.NewInlineKeyboardButtonData("Легкая одежда ~ 1.6 кг", strconv.Itoa(categoryLightCalculatorCallback)),
+			),
+			tg.NewInlineKeyboardRow(
+				tg.NewInlineKeyboardButtonData("Тяжелая одежда ~ 2.6 кг", strconv.Itoa(categoryHeavyCalculatorCallback)),
+			),
+		)
+	}
+	return tg.NewInlineKeyboardMarkup(
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Парфюм, аксессуары и др. ~ 0.5 кг", strconv.Itoa(categoryOtherCallback)),
+		),
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Легкая одежда ~ 1.6 кг", strconv.Itoa(categoryLightCallback)),
+		),
+		tg.NewInlineKeyboardRow(
+			tg.NewInlineKeyboardButtonData("Тяжелая одежда ~ 2.6 кг", strconv.Itoa(categoryHeavyCallback)),
+		),
+	)
 }

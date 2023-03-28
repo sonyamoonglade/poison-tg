@@ -148,6 +148,7 @@ func (h *handler) prepareOrderPreview(ctx context.Context, customer domain.Custo
 			n:         i + 1,
 			link:      cartItem.ShopLink,
 			size:      cartItem.Size,
+			category:  string(cartItem.Category),
 			priceRub:  cartItem.PriceRUB,
 			priceYuan: cartItem.PriceYUAN,
 		})
