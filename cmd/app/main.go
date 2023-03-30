@@ -16,7 +16,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/sonyamoonglade/poison-tg/config"
 	"github.com/sonyamoonglade/poison-tg/internal/api"
-	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram/catalog"
@@ -57,11 +56,8 @@ func run() error {
 	}
 
 	catalogProvider := catalog.NewCatalogProvider()
-	updateOnChange := func(items []domain.CatalogItem) {
-		catalogProvider.Load(items)
-	}
 
-	repos := repositories.NewRepositories(mongo, updateOnChange)
+	repos := repositories.NewRepositories(mongo, catalog.MakeUpdateOnChangeFunc(catalogProvider))
 	initialCatalog, err := repos.Catalog.GetCatalog(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting initial catalog: %w", err)

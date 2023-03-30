@@ -122,24 +122,22 @@ func (r *Router) Bootstrap() error {
 			go func() {
 				defer func() {
 					if panicMsg := recover(); panicMsg != nil {
-						logger.Get().Error("panic in handler", zap.Any("msg", panicMsg), zap.String("stack", string(debug.Stack())))
-						r.h.HandleError(ctx, errors.New("panic"), update)
+						logger.Get().Error("panic in handler",
+							zap.Any("msg", panicMsg),
+							zap.ByteString("stacktrace", debug.Stack()))
 					}
 				}()
 				if err := r.mapToHandler(ctx, update); err != nil {
-					var username string = "User"
-					var id int64 = 0
-					if update.FromChat() != nil {
-						fromChat := update.FromChat()
-						if fromChat.UserName != "" {
-							username = fromChat.UserName
-						}
-						id = update.FromChat().ID
-					}
+					var (
+						username   = domain.MakeUsername(update.FromChat().UserName)
+						telegramID = update.FromChat().ID
+					)
+
 					logger.Get().Error("error in handler occurred",
 						zap.String("from", username),
-						zap.Int64("userID", id),
+						zap.Int64("telegramId", telegramID),
 						zap.Error(err))
+
 					r.h.HandleError(ctx, err, update)
 				}
 				defer cancel()
@@ -167,19 +165,13 @@ func (r *Router) mapToHandler(ctx context.Context, u tg.Update) error {
 
 func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 	var (
-		chatID   = m.Chat.ID
-		cmd      = r.command(m.Text)
-		username string
+		chatID = m.Chat.ID
+		cmd    = r.command(m.Text)
 	)
-	if m.From.UserName == "" {
-		username = "User"
-	} else {
-		username = m.From.UserName
-	}
 	// get state and route accordingly
 	logger.Get().Debug("message info",
 		zap.String("text", m.Text),
-		zap.String("from", username),
+		zap.String("from", domain.MakeUsername(m.From.String())),
 		zap.String("date", m.Time().Format(time.RFC822)))
 	switch true {
 	case cmd(startCommand):
@@ -219,15 +211,9 @@ func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 }
 
 func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) error {
-	var username = "User"
-	if c.Message.From.UserName == "" {
-		username = "User"
-	} else {
-		username = c.Message.From.UserName
-	}
 	logger.Get().Debug("callback info",
 		zap.String("data", c.Data),
-		zap.String("from", username),
+		zap.String("from", domain.MakeUsername(c.From.String())),
 		zap.String("date", c.Message.Time().Format(time.RFC822)))
 
 	defer r.h.AnswerCallback(c.ID)

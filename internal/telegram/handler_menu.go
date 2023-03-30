@@ -155,7 +155,7 @@ func (h *handler) sendAnswerWithImages(chatID int64, answer string, imageURLs []
 	}, imageURLs)
 
 	group := tg.NewMediaGroup(chatID, thumbnails)
-	_, err := h.b.client.SendMediaGroup(group)
+	_, err := h.b.SendMediaGroup(group)
 	return err
 }
 

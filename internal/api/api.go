@@ -53,10 +53,12 @@ func NewHandler(catalogRepo repositories.Catalog, orderRepo repositories.Order, 
 }
 
 func (h *Handler) RegisterRoutes(router fiber.Router) {
-	api := router.Group("/api")
+	router.Get("/", h.Home)
 
+	api := router.Group("/api")
 	api.Post("/updateRate", h.updateRate)
 	api.Get("/currentRate", h.currentRate)
+
 	order := api.Group("/order")
 	{
 		order.Put("/addComment", h.addCommentToOrder)
@@ -75,6 +77,9 @@ func (h *Handler) RegisterRoutes(router fiber.Router) {
 		catalog.Put("/rankUp", h.rankUp)
 		catalog.Put("/rankDown", h.rankDown)
 	}
+}
+func (h *Handler) Home(c *fiber.Ctx) error {
+	return c.SendStatus(http.StatusOK)
 }
 
 func (h *Handler) updateRate(c *fiber.Ctx) error {

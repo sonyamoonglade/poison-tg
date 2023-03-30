@@ -82,7 +82,7 @@ func (h *handler) RemoveCartPosition(ctx context.Context, chatID int64, callback
 	// if customer has emptied cart
 	if len(customer.Cart) == 0 {
 		// delete edit buttons
-		if _, err := h.b.client.Request(tg.NewDeleteMessage(chatID, originalMsgID)); err != nil {
+		if err := h.b.CleanRequest(tg.NewDeleteMessage(chatID, originalMsgID)); err != nil {
 			return fmt.Errorf("can't delete message: %w", err)
 		}
 		// update cartPreview
