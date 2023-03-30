@@ -81,6 +81,9 @@ func (c *Customer) UpdateLastEditPositionSize(s string) {
 }
 
 func (c *Customer) UpdateLastEditPositionCategory(cat Category) {
+	if c.LastEditPosition == nil {
+		c.LastEditPosition = &Position{}
+	}
 	c.LastEditPosition.Category = cat
 }
 
@@ -124,7 +127,12 @@ func (c *Customer) NullifyCatalogOffset() {
 	c.CatalogOffset = 0
 }
 
+const DefaultUsername = "User"
+
 func MakeUsername(username string) string {
+	if username == "" {
+		return DefaultUsername
+	}
 	return username
 }
 

@@ -101,39 +101,45 @@ type formula func(x uint64, rate float64) (rub uint64)
 
 type FormulaMap = map[OrderType]map[Location]map[Category]formula
 
+const (
+	othMul   = 0.5
+	lightMul = 1.6
+	heavyMul = 2.6
+)
+
 var formulas = FormulaMap{
 	OrderTypeExpress: {
 		LocationOther: {
-			CategoryOther: expressfn(0.5, 764),
-			CategoryLight: expressfn(1.6, 764),
-			CategoryHeavy: expressfn(2.6, 764),
+			CategoryOther: expressfn(othMul, 764),
+			CategoryLight: expressfn(lightMul, 764),
+			CategoryHeavy: expressfn(heavyMul, 764),
 		},
 		LocationIZH: {
-			CategoryOther: expressfn(0.5, 764),
-			CategoryLight: expressfn(1.6, 764),
-			CategoryHeavy: expressfn(2.6, 764),
+			CategoryOther: expressfn(othMul, 764),
+			CategoryLight: expressfn(lightMul, 764),
+			CategoryHeavy: expressfn(heavyMul, 764),
 		},
 		LocationSPB: {
-			CategoryOther: expressfn(0.5, 764),
-			CategoryLight: expressfn(1.6, 764),
-			CategoryHeavy: expressfn(2.6, 764),
+			CategoryOther: expressfn(othMul, 764),
+			CategoryLight: expressfn(lightMul, 764),
+			CategoryHeavy: expressfn(heavyMul, 764),
 		},
 	},
 	OrderTypeNormal: {
 		LocationOther: {
-			CategoryOther: normalfn(0.5, 764),
-			CategoryLight: normalfn(1.6, 764),
-			CategoryHeavy: normalfn(2.6, 764),
+			CategoryOther: normalfn(othMul, 764),
+			CategoryLight: normalfn(lightMul, 764),
+			CategoryHeavy: normalfn(heavyMul, 764),
 		},
 		LocationIZH: {
-			CategoryOther: normalfn(0.5, 1075),
-			CategoryLight: normalfn(1.6, 1075),
-			CategoryHeavy: normalfn(2.6, 1075),
+			CategoryOther: normalfn(othMul, 1075),
+			CategoryLight: normalfn(lightMul, 1075),
+			CategoryHeavy: normalfn(heavyMul, 1075),
 		},
 		LocationSPB: {
-			CategoryOther: normalfn(0.5, 1075),
-			CategoryLight: normalfn(1.6, 1075),
-			CategoryHeavy: normalfn(2.6, 1075),
+			CategoryOther: normalfn(othMul, 1075),
+			CategoryLight: normalfn(lightMul, 1075),
+			CategoryHeavy: normalfn(heavyMul, 1075),
 		},
 	},
 }

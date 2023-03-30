@@ -35,9 +35,7 @@ func (h *handler) HandleOrderTypeInput(ctx context.Context, chatID int64, typ do
 	customer.UpdateMetaOrderType(typ)
 
 	var updateDTO = dto.UpdateCustomerDTO{
-		Meta: &domain.Meta{
-			NextOrderType: customer.Meta.NextOrderType,
-		},
+		Meta: &customer.Meta,
 	}
 	if isExpress {
 		// If order type is express then it's no matter which location user would put,

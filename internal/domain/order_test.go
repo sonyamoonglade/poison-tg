@@ -86,3 +86,130 @@ func TestNewOrder(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertYuan(t *testing.T) {
+	tests := []struct {
+		description string
+		args        ConvertYuanArgs
+		expected    uint64
+	}{
+		{
+			description: "expr izh other",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationIZH,
+				Category:  CategoryOther,
+			},
+			expected: expressfn(othMul, 764)(100, 1.0),
+		},
+		{
+			description: "expr spb other",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationSPB,
+				Category:  CategoryOther,
+			},
+			expected: expressfn(othMul, 764)(100, 1.0),
+		},
+		{
+			description: "expr other other",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationOther,
+				Category:  CategoryOther,
+			},
+			expected: expressfn(othMul, 764)(100, 1.0),
+		},
+
+		{
+			description: "expr izh light",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationIZH,
+				Category:  CategoryLight,
+			},
+			expected: expressfn(lightMul, 764)(100, 1.0),
+		},
+
+		{
+			description: "expr spb light",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationSPB,
+				Category:  CategoryLight,
+			},
+			expected: expressfn(lightMul, 764)(100, 1.0),
+		},
+		{
+			description: "expr other light",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationOther,
+				Category:  CategoryLight,
+			},
+			expected: expressfn(lightMul, 764)(100, 1.0),
+		},
+		{
+			description: "expr izh heavy",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationOther,
+				Category:  CategoryHeavy,
+			},
+			expected: expressfn(heavyMul, 764)(100, 1.0),
+		},
+		{
+			description: "expr spb heavy",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationSPB,
+				Category:  CategoryHeavy,
+			},
+			expected: expressfn(heavyMul, 764)(100, 1.0),
+		},
+		{
+			description: "expr other heavy",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeExpress,
+				Location:  LocationOther,
+				Category:  CategoryHeavy,
+			},
+			expected: expressfn(heavyMul, 764)(100, 1.0),
+		},
+		{
+			description: "normal izh other",
+			args: ConvertYuanArgs{
+				X:         100,
+				Rate:      1.0,
+				OrderType: OrderTypeNormal,
+				Location:  LocationIZH,
+				Category:  CategoryOther,
+			},
+			expected: normalfn(othMul, 1075)(100, 1.0),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			actual := ConvertYuan(test.args)
+			require.Equal(t, test.expected, actual)
+		})
+	}
+}
