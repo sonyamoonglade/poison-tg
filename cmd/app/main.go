@@ -92,7 +92,9 @@ func run() error {
 		Immutable: true,
 		Prefork:   false,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
-			logger.Get().Error("error in api endpoint", zap.Error(err))
+			logger.Get().Error("error in api endpoint", zap.ByteString("url",
+				ctx.Request().RequestURI()),
+				zap.Error(err))
 			return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
 			})
@@ -105,8 +107,8 @@ func run() error {
 	}))
 
 	app.Use(func(c *fiber.Ctx) error {
-		logger.Get().Debug("new api request",
-			zap.String("url", string(c.Request().RequestURI())),
+		logger.Get().Debug("new incoming request",
+			zap.ByteString("url", c.Request().RequestURI()),
 		)
 		return c.Next()
 	})
