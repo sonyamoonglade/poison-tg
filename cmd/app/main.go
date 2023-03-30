@@ -16,7 +16,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/sonyamoonglade/poison-tg/config"
 	"github.com/sonyamoonglade/poison-tg/internal/api"
-	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram"
 	"github.com/sonyamoonglade/poison-tg/internal/telegram/catalog"
@@ -57,11 +56,8 @@ func run() error {
 	}
 
 	catalogProvider := catalog.NewCatalogProvider()
-	updateOnChange := func(items []domain.CatalogItem) {
-		catalogProvider.Load(items)
-	}
 
-	repos := repositories.NewRepositories(mongo, updateOnChange)
+	repos := repositories.NewRepositories(mongo, catalog.MakeUpdateOnChangeFunc(catalogProvider))
 	initialCatalog, err := repos.Catalog.GetCatalog(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting initial catalog: %w", err)
@@ -96,7 +92,9 @@ func run() error {
 		Immutable: true,
 		Prefork:   false,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
-			logger.Get().Error("error in api endpoint", zap.Error(err))
+			logger.Get().Error("error in api endpoint", zap.ByteString("url",
+				ctx.Request().RequestURI()),
+				zap.Error(err))
 			return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
 			})
@@ -109,8 +107,8 @@ func run() error {
 	}))
 
 	app.Use(func(c *fiber.Ctx) error {
-		logger.Get().Debug("new api request",
-			zap.String("url", string(c.Request().RequestURI())),
+		logger.Get().Debug("new incoming request",
+			zap.ByteString("url", c.Request().RequestURI()),
 		)
 		return c.Next()
 	})

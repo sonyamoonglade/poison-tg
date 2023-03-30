@@ -127,11 +127,11 @@ func (c *Customer) NullifyCatalogOffset() {
 	c.CatalogOffset = 0
 }
 
-const DefaultUsername = "User"
+const defaultUsername = "User"
 
 func MakeUsername(username string) string {
 	if username == "" {
-		return DefaultUsername
+		return defaultUsername
 	}
 	return username
 }

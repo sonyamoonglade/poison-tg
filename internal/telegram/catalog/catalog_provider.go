@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
+	"github.com/sonyamoonglade/poison-tg/internal/repositories"
 )
 
 type CatalogProvider struct {
@@ -73,4 +74,10 @@ func (c *CatalogProvider) LoadAt(offset uint) domain.CatalogItem {
 	defer c.mu.RUnlock()
 	_ = c.items[offset]
 	return c.items[offset]
+}
+
+func MakeUpdateOnChangeFunc(catalogProvider *CatalogProvider) repositories.OnChangeFunc {
+	return func(items []domain.CatalogItem) {
+		catalogProvider.Load(items)
+	}
 }

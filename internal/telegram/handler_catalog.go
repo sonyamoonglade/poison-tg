@@ -42,7 +42,7 @@ func (h *handler) Catalog(ctx context.Context, chatID int64) error {
 	group := tg.NewMediaGroup(chatID, thumbnails)
 
 	// Sends thumnails with caption
-	sentMsgs, err := h.b.client.SendMediaGroup(group)
+	sentMsgs, err := h.b.SendMediaGroup(group)
 	if err != nil {
 		return err
 	}

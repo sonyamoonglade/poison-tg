@@ -17,7 +17,7 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 	thumbnails := makeThumbnails(getTemplate().GuideStep1, guideStep1Thumbnail1, guideStep1Thumbnail2)
 	group := tg.NewMediaGroup(chatID, thumbnails)
 
-	sentMsgs, err := h.b.client.SendMediaGroup(group)
+	sentMsgs, err := h.b.SendMediaGroup(group)
 	if err != nil {
 		return err
 	}

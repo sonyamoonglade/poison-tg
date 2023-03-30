@@ -18,15 +18,21 @@ type RateProvider interface {
 	GetYuanRate() float64
 }
 
+type Bot interface {
+	Send(c tg.Chattable) (tg.Message, error)
+	CleanRequest(c tg.Chattable) error
+	SendMediaGroup(c tg.MediaGroupConfig) ([]tg.Message, error)
+}
+
 type handler struct {
-	b               *Bot
+	b               Bot
 	customerRepo    repositories.Customer
 	orderRepo       repositories.Order
 	rateProvider    RateProvider
 	catalogProvider *catalog.CatalogProvider
 }
 
-func NewHandler(bot *Bot,
+func NewHandler(bot Bot,
 	repositories repositories.Repositories,
 	rateProvider RateProvider,
 	catalogProvider *catalog.CatalogProvider) *handler {
