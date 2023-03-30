@@ -73,7 +73,15 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 		}
 	}
 	if dto.CalculatorMeta != nil {
-		update["calculatorMeta"] = dto.CalculatorMeta
+		if dto.CalculatorMeta.Category != nil {
+			update["calculatorMeta.category"] = *dto.CalculatorMeta.Category
+		}
+		if dto.CalculatorMeta.Location != nil {
+			update["calculatorMeta.location"] = *dto.CalculatorMeta.Location
+		}
+		if dto.CalculatorMeta.NextOrderType != nil {
+			update["calculatorMeta.nextOrderType"] = *dto.CalculatorMeta.NextOrderType
+		}
 	}
 
 	if dto.CatalogOffset != nil {

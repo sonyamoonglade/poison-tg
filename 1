@@ -189,12 +189,14 @@ func (h *handler) HandleCalculatorInput(ctx context.Context, m *tg.Message) erro
 	}
 
 	var (
-		ordTyp = customer.CalculatorMeta.NextOrderType
-		loc    = customer.CalculatorMeta.Location
+		ordTyp = customer.Meta.NextOrderType
+		loc    = customer.Meta.Location
 	)
 	if ordTyp == nil || loc == nil {
 		return fmt.Errorf("order type or location in meta is nil")
 	}
+
+	fmt.Println(*customer.CalculatorMeta.Category, *customer.CalculatorMeta.Location, *customer.CalculatorMeta.NextOrderType)
 	// We should apply customer.Meta and customer.CalculatorMeta.Category in order to calculate correctly
 	args := domain.ConvertYuanArgs{
 		X:         priceYuan,

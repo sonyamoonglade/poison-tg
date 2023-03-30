@@ -38,7 +38,7 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 
 	// If cart is not empty then skip location and order type ask
 	if len(customer.Cart) > 0 {
-		return h.askForSize(ctx, chatID)
+		return h.askForCategory(ctx, chatID)
 	}
 
 	if err := h.customerRepo.UpdateState(ctx, telegramID, domain.StateWaitingForOrderType); err != nil {
