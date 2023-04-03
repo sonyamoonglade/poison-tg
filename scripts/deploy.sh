@@ -12,12 +12,13 @@ echo "building..."
 
 # remove old files
 ssh -i ~/.ssh/vadim-shop $USER@$IP "rm -rf ~/build"
-# stop existing session
-ssh -i ~/.ssh/vadim-shop $USER@$IP "kill -9 \$(pidof app)"
-echo "stopped running process"
 
 # transfer build folder 
 scp -r -i ~/.ssh/vadim-shop deploy $USER@$IP:./build/
 echo "copying build folder"
+
+# stop existing session
+ssh -i ~/.ssh/vadim-shop $USER@$IP "kill -9 \$(pidof app)"
+echo "stopped running process"
 
 rm -rf deploy
