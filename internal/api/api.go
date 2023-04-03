@@ -237,7 +237,7 @@ func (h *Handler) withNewCatalog(c *fiber.Ctx) error {
 	if err != nil {
 		return fmt.Errorf("get catalog: %w", err)
 	}
-	return c.Status(http.StatusCreated).JSON(newCatalog)
+	return c.Status(http.StatusOK).JSON(newCatalog)
 }
 
 func (h *Handler) catalog(c *fiber.Ctx) error {

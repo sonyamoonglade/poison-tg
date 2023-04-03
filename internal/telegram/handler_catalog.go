@@ -28,7 +28,7 @@ func (h *handler) Catalog(ctx context.Context, chatID int64) error {
 	// Load appropriate item
 	item := h.catalogProvider.LoadAt(customer.CatalogOffset)
 
-	thumbnails := functools.Map(func(url string) interface{} {
+	thumbnails := functools.Map(func(url string, i int) interface{} {
 		thumbnail := tg.NewInputMediaPhoto(tg.FileURL(url))
 		if !first {
 			// add caption to first element
@@ -47,7 +47,7 @@ func (h *handler) Catalog(ctx context.Context, chatID int64) error {
 		return err
 	}
 
-	msgIDs := functools.Map(func(m tg.Message) int {
+	msgIDs := functools.Map(func(m tg.Message, i int) int {
 		return m.MessageID
 	}, sentMsgs)
 
@@ -118,7 +118,7 @@ func (h *handler) updateCatalog(ctx context.Context, chatID int64, thumbnailMsgI
 	}
 	// Get next item images
 	var first bool
-	thumbnails := functools.Map(func(url string) interface{} {
+	thumbnails := functools.Map(func(url string, i int) interface{} {
 		thumbnail := tg.NewInputMediaPhoto(tg.FileURL(url))
 		if !first {
 			// add caption to first element

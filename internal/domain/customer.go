@@ -30,6 +30,7 @@ var (
 
 var (
 	ErrCustomerNotFound = errors.New("customer not found")
+	ErrNoCustomers      = errors.New("no customers found")
 )
 
 type Meta struct {

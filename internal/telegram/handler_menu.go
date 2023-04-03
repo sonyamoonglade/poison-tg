@@ -144,7 +144,7 @@ func (h *handler) answerQuestionWithPhoto(chatID int64, answers []string, imageU
 
 func (h *handler) sendAnswerWithImages(chatID int64, answer string, imageURLs []string) error {
 	var first bool
-	thumbnails := functools.Map(func(url string) interface{} {
+	thumbnails := functools.Map(func(url string, i int) interface{} {
 		thumbnail := tg.NewInputMediaPhoto(tg.FileURL(url))
 		if !first {
 			thumbnail.Caption = answer

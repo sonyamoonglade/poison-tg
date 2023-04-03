@@ -135,4 +135,17 @@ func (c *customerRepo) GetState(ctx context.Context, telegramID int64) (domain.S
 	return customer.TgState, nil
 }
 
-func (c *customerRepo) PrintDb() {}
+func (c *customerRepo) All(ctx context.Context) ([]domain.Customer, error) {
+	res, err := c.customers.Find(ctx, bson.D{})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, domain.ErrNoCustomers
+		}
+		return nil, err
+	}
+	var customers []domain.Customer
+	if err := res.All(ctx, &customers); err != nil {
+		return nil, err
+	}
+	return customers, nil
+}
