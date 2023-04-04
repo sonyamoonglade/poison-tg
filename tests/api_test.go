@@ -15,7 +15,6 @@ func (s *AppTestSuite) TestApiAddItem() {
 		require = s.Require()
 	)
 
-	s.T().Skip()
 	s.Run("should add item to catalog with rank 0 because catalog's empty", func() {
 		inp := input.AddItemToCatalogInput{
 			ImageURLs:       []string{f.URL(), f.URL()},
@@ -26,7 +25,7 @@ func (s *AppTestSuite) TestApiAddItem() {
 			ShopLink:        f.URL(),
 			PriceRUB:        234,
 		}
-		resp, err := s.app.Test(newJsonRequest(http.MethodGet, "/api/catalog/addItem", inp), -1)
+		resp, err := s.app.Test(newJsonRequest(http.MethodPost, "/api/catalog/addItem", inp), -1)
 		require.NoError(err)
 		require.Equal(http.StatusOK, resp.StatusCode)
 
@@ -73,18 +72,18 @@ func (s *AppTestSuite) TestApiAddItem() {
 		i1, i2, i3 := inputs[0], inputs[1], inputs[2]
 
 		// Add first
-		resp, err := s.app.Test(newJsonRequest(http.MethodGet, "/api/catalog/addItem", i1), -1)
+		resp, err := s.app.Test(newJsonRequest(http.MethodPost, "/api/catalog/addItem", i1), -1)
 		require.NoError(err)
 		require.Equal(http.StatusOK, resp.StatusCode)
 
 		// Add second
-		resp, err = s.app.Test(newJsonRequest(http.MethodGet, "/api/catalog/addItem", i2), -1)
+		resp, err = s.app.Test(newJsonRequest(http.MethodPost, "/api/catalog/addItem", i2), -1)
 		require.NoError(err)
 		require.Equal(http.StatusOK, resp.StatusCode)
 
 		var respJson []domain.CatalogItem
 		// Add third
-		resp, err = s.app.Test(newJsonRequest(http.MethodGet, "/api/catalog/addItem", i3), -1)
+		resp, err = s.app.Test(newJsonRequest(http.MethodPost, "/api/catalog/addItem", i3), -1)
 		require.NoError(err)
 		require.Equal(http.StatusOK, resp.StatusCode)
 		require.NoError(json.NewDecoder(resp.Body).Decode(&respJson))

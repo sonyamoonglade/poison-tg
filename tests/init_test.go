@@ -38,7 +38,7 @@ func (mb *MockBot) SendMediaGroup(c tg.MediaGroupConfig) ([]tg.Message, error) {
 
 func (mb *MockBot) Send(c tg.Chattable) (tg.Message, error) {
 	args := mb.Called(c)
-	return args.Get(0).(tg.Message), args.Get(1).(error)
+	return args.Get(0).(tg.Message), args.Error(1)
 }
 
 func init() {
@@ -51,9 +51,10 @@ type AppTestSuite struct {
 
 	db           *database.Mongo
 	tgrouter     *telegram.Router
+	tghandler    telegram.RouteHandler
 	api          *api.Handler
 	repositories *repositories.Repositories
-	mockBot      telegram.Bot
+	mockBot      *MockBot
 	updatesChan  <-chan tg.Update
 	app          *fiber.App
 }
@@ -105,6 +106,8 @@ func (s *AppTestSuite) setupDeps() {
 	tgHandler := telegram.NewHandler(mockBot, repos, rateProvider, catalogProvider)
 	tgRouter := telegram.NewRouter(updates, tgHandler, repos.Customer, time.Second*5)
 
+	mockBot.On("Send", mock.Anything).Return(tg.Message{}, nil)
+
 	app := fiber.New(fiber.Config{
 		Immutable:    true,
 		ReadTimeout:  time.Second * 10,
@@ -121,6 +124,7 @@ func (s *AppTestSuite) setupDeps() {
 	s.db = mongo
 	s.updatesChan = updates
 	s.tgrouter = tgRouter
+	s.tghandler = tgHandler
 	s.api = apiHandler
 	s.repositories = &repos
 	s.mockBot = mockBot

@@ -37,12 +37,6 @@ const (
 	button95SelectCallback
 	addPositionCallback
 	editCartCallback
-	izhLocationCallback
-	izhLocationCalculatorCallback
-	spbLocationCallback
-	spbLocationCalculatorCallback
-	othLocationCallback
-	othLocationCalculatorCallback
 	orderTypeNormalCallback
 	orderTypeNormalCalculatorCallback
 	orderTypeExpressCallback
@@ -78,9 +72,7 @@ var (
 	cartPreviewButtons                  = cartPreview()
 	addPositionButtons                  = addPos()
 	makeOrderButtons                    = makeOrder()
-	locationButtons                     = location()
 	orderTypeButtons                    = orderType()
-	locationCalculatorButtons           = locationCalculator()
 	orderTypeCalculatorButtons          = orderTypeCalculator()
 	categoryButtons                     = category(false)
 	categoryCalculatorButtons           = category(true)
@@ -298,15 +290,6 @@ func prepareEditCartButtons(n int, previewCartMsgID int) tg.InlineKeyboardMarkup
 	return tg.NewInlineKeyboardMarkup(keyboard...)
 }
 
-func location() tg.InlineKeyboardMarkup {
-	return tg.NewInlineKeyboardMarkup(
-		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Ижевск", strconv.Itoa(izhLocationCallback)),
-			tg.NewInlineKeyboardButtonData("Питер", strconv.Itoa(spbLocationCallback)),
-			tg.NewInlineKeyboardButtonData("Другой город", strconv.Itoa(othLocationCallback)),
-		))
-}
-
 func orderType() tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
@@ -356,14 +339,6 @@ func prepareAfterPaidButtons(shortOrderId string) tg.InlineKeyboardMarkup {
 		))
 }
 
-func locationCalculator() tg.InlineKeyboardMarkup {
-	return tg.NewInlineKeyboardMarkup(
-		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("Ижевск", strconv.Itoa(izhLocationCalculatorCallback)),
-			tg.NewInlineKeyboardButtonData("Питер", strconv.Itoa(spbLocationCalculatorCallback)),
-			tg.NewInlineKeyboardButtonData("Другой город", strconv.Itoa(othLocationCalculatorCallback)),
-		))
-}
 func orderTypeCalculator() tg.InlineKeyboardMarkup {
 	return tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(

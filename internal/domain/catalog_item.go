@@ -27,7 +27,6 @@ type CatalogItem struct {
 	PriceRUB        uint64             `json:"priceRub" bson:"priceRub"`
 }
 
-// TODO: update
 func (c *CatalogItem) GetCaption() string {
 	template := "Товар: <a href=\"%s\">%s</a>\n" +
 		"Размер(ы): %s\n" +

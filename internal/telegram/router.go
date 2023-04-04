@@ -36,7 +36,6 @@ type RouteHandler interface {
 
 	AskForCalculatorOrderType(ctx context.Context, chatID int64) error
 	HandleCalculatorOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error
-	HandleCalculatorLocationInput(ctx context.Context, chatID int64, loc domain.Location) error
 	HandleCalculatorCategoryInput(ctx context.Context, chatID int64, cat domain.Category) error
 	AskForCalculatorCategory(ctx context.Context, chatID int64) error
 	HandleCalculatorInput(ctx context.Context, m *tg.Message) error
@@ -46,9 +45,8 @@ type RouteHandler interface {
 	RemoveCartPosition(ctx context.Context, chatID int64, callbackData int, originalMsgID, cartPreviewMsgID int) error
 
 	// Add position is like StartmakeOrderGuide but without instruction
-	AddPosition(ctx context.Context, m *tg.Message) error
+	AddPosition(ctx context.Context, chatID int64) error
 
-	HandleLocationInput(ctx context.Context, chatID int64, loc domain.Location) error
 	HandleOrderTypeInput(ctx context.Context, chatID int64, typ domain.OrderType) error
 	HandleCategoryInput(ctx context.Context, chatID int64, cat domain.Category) error
 
@@ -181,7 +179,7 @@ func (r *Router) mapToCommandHandler(ctx context.Context, m *tg.Message) error {
 	case cmd(getCartCommand):
 		return r.h.GetCart(ctx, chatID)
 	case cmd(addPositionCommand):
-		return r.h.AddPosition(ctx, m)
+		return r.h.AddPosition(ctx, chatID)
 	default:
 		customerState, err := r.stateProvider.GetState(ctx, chatID)
 		if err != nil {
@@ -279,19 +277,7 @@ func (r *Router) mapToCallbackHandler(ctx context.Context, c *tg.CallbackQuery) 
 	case editCartCallback:
 		return r.h.EditCart(ctx, chatID, msgID)
 	case addPositionCallback:
-		return r.h.AddPosition(ctx, c.Message)
-	case izhLocationCallback:
-		return r.h.HandleLocationInput(ctx, chatID, domain.LocationIZH)
-	case izhLocationCalculatorCallback:
-		return r.h.HandleCalculatorLocationInput(ctx, chatID, domain.LocationIZH)
-	case spbLocationCallback:
-		return r.h.HandleLocationInput(ctx, chatID, domain.LocationSPB)
-	case spbLocationCalculatorCallback:
-		return r.h.HandleCalculatorLocationInput(ctx, chatID, domain.LocationSPB)
-	case othLocationCallback:
-		return r.h.HandleLocationInput(ctx, chatID, domain.LocationOther)
-	case othLocationCalculatorCallback:
-		return r.h.HandleCalculatorLocationInput(ctx, chatID, domain.LocationOther)
+		return r.h.AddPosition(ctx, chatID)
 	case orderTypeNormalCallback:
 		return r.h.HandleOrderTypeInput(ctx, chatID, domain.OrderTypeNormal)
 	case orderTypeNormalCalculatorCallback:

@@ -29,6 +29,13 @@ func (c *customerRepo) Save(ctx context.Context, customer domain.Customer) error
 	return nil
 }
 
+func (c *customerRepo) Delete(ctx context.Context, customerID primitive.ObjectID) error {
+	if _, err := c.customers.DeleteOne(ctx, bson.M{"_id": customerID}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *customerRepo) NullifyCatalogOffsets(ctx context.Context) error {
 	filter := bson.D{}
 	update := bson.M{"$set": bson.M{"catalogOffset": 0}}
@@ -65,9 +72,7 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 	}
 
 	if dto.Meta != nil {
-		if dto.Meta.Location != nil {
-			update["meta.location"] = dto.Meta.Location
-		}
+
 		if dto.Meta.NextOrderType != nil {
 			update["meta.nextOrderType"] = dto.Meta.NextOrderType
 		}
@@ -76,9 +81,7 @@ func (c *customerRepo) Update(ctx context.Context, customerID primitive.ObjectID
 		if dto.CalculatorMeta.Category != nil {
 			update["calculatorMeta.category"] = *dto.CalculatorMeta.Category
 		}
-		if dto.CalculatorMeta.Location != nil {
-			update["calculatorMeta.location"] = *dto.CalculatorMeta.Location
-		}
+
 		if dto.CalculatorMeta.NextOrderType != nil {
 			update["calculatorMeta.nextOrderType"] = *dto.CalculatorMeta.NextOrderType
 		}

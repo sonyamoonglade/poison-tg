@@ -36,7 +36,7 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 		return err
 	}
 
-	// If cart is not empty then skip location and order type ask
+	// If cart is not empty then skip order type ask
 	if len(customer.Cart) > 0 {
 		return h.askForCategory(ctx, chatID)
 	}
