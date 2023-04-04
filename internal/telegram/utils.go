@@ -37,7 +37,7 @@ func (h *handler) sendMessage(chatID int64, text string) error {
 
 func makeThumbnails(caption string, urls ...string) []interface{} {
 	var first bool
-	return functools.Map(func(url string) interface{} {
+	return functools.Map(func(url string, i int) interface{} {
 		thumbnail := tg.NewInputMediaPhoto(tg.FileURL(url))
 		if !first {
 			// add caption to first element

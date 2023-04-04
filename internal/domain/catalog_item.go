@@ -3,8 +3,10 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
+	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -50,4 +52,39 @@ func (c *CatalogItem) getSizes() string {
 
 func (c *CatalogItem) getCities() string {
 	return strings.Join(c.AvailableInCity, "; ")
+}
+
+// catalog must be sorted by rank ascending
+func UpdateRanks(catalog []CatalogItem) []CatalogItem {
+	if catalog == nil {
+		return nil
+	}
+	// If first item's rank is 0 then down all subsequent
+	if catalog[0].Rank != uint(0) && catalog[0].Rank > uint(0) {
+		return functools.Map(func(item CatalogItem, i int) CatalogItem {
+			item.Rank--
+			return item
+		}, catalog)
+	}
+
+	// Found gap somewhere in between (only one at a time)
+	var idxGap int
+	for i := 0; i < len(catalog)-1; i++ {
+		curr, next := catalog[i], catalog[i+1]
+		if math.Abs(float64(curr.Rank)-float64(next.Rank)) > 1 {
+			idxGap = i + 1
+			break
+		}
+	}
+	// All fine
+	if idxGap == 0 {
+		return catalog
+	}
+	return functools.Map(func(item CatalogItem, i int) CatalogItem {
+		if i >= idxGap {
+			item.Rank--
+			return item
+		}
+		return item
+	}, catalog)
 }

@@ -14,7 +14,7 @@ type Customer interface {
 	UpdateState(ctx context.Context, telegramID int64, newState domain.State) error
 	NullifyCatalogOffsets(ctx context.Context) error
 	Update(ctx context.Context, customerID primitive.ObjectID, dto dto.UpdateCustomerDTO) error
-	PrintDb()
+	All(ctx context.Context) ([]domain.Customer, error)
 }
 
 type Order interface {

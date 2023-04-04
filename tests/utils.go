@@ -30,7 +30,7 @@ func newBody(b interface{}) io.Reader {
 }
 
 func newJsonRequest(method, url string, body any) *http.Request {
-	req, _ := http.NewRequest(http.MethodPost, buildURL("/api/catalog/addItem"), newBody(body))
+	req, _ := http.NewRequest(method, buildURL(url), newBody(body))
 	req.Header.Set("Content-Type", "application/json")
 	return req
 }

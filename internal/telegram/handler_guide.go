@@ -22,7 +22,7 @@ func (h *handler) StartMakeOrderGuide(ctx context.Context, m *tg.Message) error 
 		return err
 	}
 
-	msgIDs := functools.Map(func(m tg.Message) int {
+	msgIDs := functools.Map(func(m tg.Message, i int) int {
 		return m.MessageID
 	}, sentMsgs)
 

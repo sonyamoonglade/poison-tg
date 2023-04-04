@@ -7,7 +7,6 @@ import (
 
 	"github.com/sonyamoonglade/poison-tg/internal/domain"
 	"github.com/sonyamoonglade/poison-tg/internal/repositories/dto"
-	"github.com/sonyamoonglade/poison-tg/pkg/functools"
 	"github.com/sonyamoonglade/poison-tg/pkg/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -125,21 +124,18 @@ func (c *catalogRepo) AddItem(ctx context.Context, item domain.CatalogItem) erro
 
 func (c *catalogRepo) RemoveItem(ctx context.Context, itemID primitive.ObjectID) error {
 	_, err := c.catalog.DeleteOne(ctx, bson.M{"_id": itemID})
+	if err != nil {
+		return err
+	}
+	// TODO: move to service
 	catalog, err := c.GetCatalog(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Update ranks
-	newCatalog := functools.Map(func(catalogItem domain.CatalogItem) domain.CatalogItem {
-		if catalogItem.Rank == 0 {
-			return catalogItem
-		}
-
-		catalogItem.Rank--
-		return catalogItem
-	}, catalog)
-
+	// TODO: move to service(bl)
+	newCatalog := domain.UpdateRanks(catalog)
 	for _, newItem := range newCatalog {
 		if _, err := c.catalog.UpdateOne(ctx, bson.M{"_id": newItem.ItemID}, bson.M{"$set": bson.M{"rank": newItem.Rank}}); err != nil {
 			return err
@@ -155,7 +151,7 @@ func (c *catalogRepo) RemoveItem(ctx context.Context, itemID primitive.ObjectID)
 		}
 		c.onChange(newCatalog)
 	}()
-	return err
+	return nil
 }
 
 func (c *catalogRepo) UpdateRanks(ctx context.Context, dto dto.UpdateItemDTO) error {
