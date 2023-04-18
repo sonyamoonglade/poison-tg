@@ -10,3 +10,4 @@ unit-test:
 
 ci: unit-test
 	go vet ./...
+	./scripts/e2e.sh

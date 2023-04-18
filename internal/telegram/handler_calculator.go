@@ -37,14 +37,8 @@ func (h *handler) HandleCalculatorOrderTypeInput(ctx context.Context, chatID int
 
 	customer.UpdateCalculatorMetaOrderType(typ)
 
-	var updateDTO = dto.UpdateCustomerDTO{
+	updateDTO := dto.UpdateCustomerDTO{
 		CalculatorMeta: &customer.CalculatorMeta,
-	}
-	if isExpress {
-		// If order type is express then it's no matter which location user would put,
-		// so whatever
-		customer.UpdateCalculatorMetaLocation(domain.LocationOther)
-		updateDTO.CalculatorMeta.Location = customer.CalculatorMeta.Location
 	}
 
 	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
@@ -60,60 +54,6 @@ func (h *handler) HandleCalculatorOrderTypeInput(ctx context.Context, chatID int
 		resp += "Обычный"
 		break
 	}
-	if err := h.sendMessage(chatID, resp); err != nil {
-		return err
-	}
-
-	if isExpress {
-		// Skip location part because there's one formula for express orders
-		return h.AskForCalculatorCategory(ctx, chatID)
-	}
-
-	return h.askForCalculatorLocation(ctx, chatID)
-}
-
-func (h *handler) askForCalculatorLocation(ctx context.Context, chatID int64) error {
-	if err := h.customerRepo.UpdateState(ctx, chatID, domain.StateWaitingForCalculatorLocation); err != nil {
-		return err
-	}
-	text := "Из какого ты города? 🌄"
-	return h.sendWithKeyboard(chatID, text, locationCalculatorButtons)
-}
-
-func (h *handler) HandleCalculatorLocationInput(ctx context.Context, chatID int64, loc domain.Location) error {
-	var telegramID = chatID
-
-	if err := h.checkRequiredState(ctx, domain.StateWaitingForCalculatorLocation, chatID); err != nil {
-		return err
-	}
-
-	customer, err := h.customerRepo.GetByTelegramID(ctx, telegramID)
-	if err != nil {
-		return err
-	}
-	fmt.Println(customer.CalculatorMeta)
-	customer.UpdateCalculatorMetaLocation(loc)
-	fmt.Println(customer.CalculatorMeta)
-	updateDTO := dto.UpdateCustomerDTO{
-		CalculatorMeta: &customer.CalculatorMeta,
-	}
-
-	if err := h.customerRepo.Update(ctx, customer.CustomerID, updateDTO); err != nil {
-		return err
-	}
-	var resp = "Выбран: "
-	switch loc {
-	case domain.LocationSPB:
-		resp += "Питер"
-		break
-	case domain.LocationIZH:
-		resp += "Ижевск"
-		break
-	case domain.LocationOther:
-		resp += "Другой"
-		break
-	}
-
 	if err := h.sendMessage(chatID, resp); err != nil {
 		return err
 	}
@@ -190,18 +130,17 @@ func (h *handler) HandleCalculatorInput(ctx context.Context, m *tg.Message) erro
 
 	var (
 		ordTyp = customer.CalculatorMeta.NextOrderType
-		loc    = customer.CalculatorMeta.Location
+		cat    = customer.CalculatorMeta.Category
 	)
-	if ordTyp == nil || loc == nil {
-		return fmt.Errorf("order type or location in meta is nil")
+	if ordTyp == nil || cat == nil {
+		return fmt.Errorf("order type or category in meta is nil")
 	}
 	// We should apply customer.Meta and customer.CalculatorMeta.Category in order to calculate correctly
 	args := domain.ConvertYuanArgs{
 		X:         priceYuan,
 		Rate:      h.rateProvider.GetYuanRate(),
 		OrderType: *ordTyp,
-		Location:  *loc,
-		Category:  *customer.CalculatorMeta.Category,
+		Category:  *cat,
 	}
 
 	priceRub := domain.ConvertYuan(args)

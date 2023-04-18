@@ -19,3 +19,12 @@ func Reduce[A, B any](f func(B, A) B, s []A, initValue B) B {
 	}
 	return acc
 }
+
+func Any(bits ...bool) bool {
+	for i := 0; i < len(bits); i++ {
+		if bits[i] {
+			return true
+		}
+	}
+	return false
+}

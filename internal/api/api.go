@@ -25,10 +25,12 @@ type RateProvider struct {
 	CurrRate float64
 }
 
+const DefaultRate = 11.8
+
 func NewRateProvider() *RateProvider {
 	return &RateProvider{
 		mu:       new(sync.RWMutex),
-		CurrRate: 11.96,
+		CurrRate: DefaultRate,
 	}
 }
 

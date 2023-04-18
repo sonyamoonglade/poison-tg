@@ -12,20 +12,18 @@ var (
 	// Default state not waiting for any make order response
 	StateDefault                       = State{0}
 	StateWaitingForOrderType           = State{1}
-	StateWaitingForLocation            = State{2}
-	StateWaitingForCategory            = State{3}
-	StateWaitingForCalculatorCategory  = State{4}
-	StateWaitingForCalculatorOrderType = State{5}
-	StateWaitingForCalculatorLocation  = State{6}
-	StateWaitingForSize                = State{7}
-	StateWaitingForButton              = State{8}
-	StateWaitingForPrice               = State{9}
-	StateWaitingForLink                = State{10}
-	StateWaitingForCartPositionToEdit  = State{11}
-	StateWaitingForCalculatorInput     = State{12}
-	StateWaitingForFIO                 = State{13}
-	StateWaitingForPhoneNumber         = State{14}
-	StateWaitingForDeliveryAddress     = State{15}
+	StateWaitingForCategory            = State{2}
+	StateWaitingForCalculatorCategory  = State{3}
+	StateWaitingForCalculatorOrderType = State{4}
+	StateWaitingForSize                = State{5}
+	StateWaitingForButton              = State{6}
+	StateWaitingForPrice               = State{7}
+	StateWaitingForLink                = State{8}
+	StateWaitingForCartPositionToEdit  = State{9}
+	StateWaitingForCalculatorInput     = State{10}
+	StateWaitingForFIO                 = State{11}
+	StateWaitingForPhoneNumber         = State{12}
+	StateWaitingForDeliveryAddress     = State{13}
 )
 
 var (
@@ -35,12 +33,10 @@ var (
 
 type Meta struct {
 	NextOrderType *OrderType `json:"nextOrderType" bson:"nextOrderType"`
-	Location      *Location  `json:"location" bson:"location"`
 }
 
 type CalculatorMeta struct {
 	NextOrderType *OrderType `json:"nextOrderType" bson:"nextOrderType"`
-	Location      *Location  `json:"location" bson:"location"`
 	Category      *Category  `bson:"category"`
 }
 
@@ -105,19 +101,11 @@ func (c *Customer) UpdateMetaOrderType(typ OrderType) {
 	c.Meta.NextOrderType = &typ
 }
 
-func (c *Customer) UpdateMetaLocation(loc Location) {
-	c.Meta.Location = &loc
-}
-
 func (c *Customer) UpdateCalculatorMetaCategory(cat Category) {
 	c.CalculatorMeta.Category = &cat
 }
 func (c *Customer) UpdateCalculatorMetaOrderType(typ OrderType) {
 	c.CalculatorMeta.NextOrderType = &typ
-}
-
-func (c *Customer) UpdateCalculatorMetaLocation(loc Location) {
-	c.CalculatorMeta.Location = &loc
 }
 
 func (c *Customer) IncrementCatalogOffset() {

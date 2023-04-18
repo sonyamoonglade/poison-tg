@@ -27,7 +27,3 @@ type Position struct {
 	Size       string             `json:"size" bson:"size"`
 	Category   Category           `json:"category" bson:"category"`
 }
-
-func NewEmptyPosition() Position {
-	return Position{}
-}

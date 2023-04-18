@@ -15,14 +15,6 @@ const (
 	OrderTypeNormal
 )
 
-type Location int
-
-const (
-	LocationSPB Location = iota + 1
-	LocationIZH
-	LocationOther
-)
-
 type Status int
 
 const (
@@ -99,7 +91,7 @@ func IsValidOrderStatus(s Status) bool {
 
 type formula func(x uint64, rate float64) (rub uint64)
 
-type FormulaMap = map[OrderType]map[Location]map[Category]formula
+type FormulaMap = map[OrderType]map[Category]formula
 
 const (
 	othMul   = 0.5
@@ -109,38 +101,14 @@ const (
 
 var formulas = FormulaMap{
 	OrderTypeExpress: {
-		LocationOther: {
-			CategoryOther: expressfn(othMul, 764),
-			CategoryLight: expressfn(lightMul, 764),
-			CategoryHeavy: expressfn(heavyMul, 764),
-		},
-		LocationIZH: {
-			CategoryOther: expressfn(othMul, 764),
-			CategoryLight: expressfn(lightMul, 764),
-			CategoryHeavy: expressfn(heavyMul, 764),
-		},
-		LocationSPB: {
-			CategoryOther: expressfn(othMul, 764),
-			CategoryLight: expressfn(lightMul, 764),
-			CategoryHeavy: expressfn(heavyMul, 764),
-		},
+		CategoryOther: expressfn(othMul, 764),
+		CategoryLight: expressfn(lightMul, 764),
+		CategoryHeavy: expressfn(heavyMul, 764),
 	},
 	OrderTypeNormal: {
-		LocationOther: {
-			CategoryOther: normalfn(othMul, 764),
-			CategoryLight: normalfn(lightMul, 764),
-			CategoryHeavy: normalfn(heavyMul, 764),
-		},
-		LocationIZH: {
-			CategoryOther: normalfn(othMul, 1075),
-			CategoryLight: normalfn(lightMul, 1075),
-			CategoryHeavy: normalfn(heavyMul, 1075),
-		},
-		LocationSPB: {
-			CategoryOther: normalfn(othMul, 1075),
-			CategoryLight: normalfn(lightMul, 1075),
-			CategoryHeavy: normalfn(heavyMul, 1075),
-		},
+		CategoryOther: normalfn(othMul, 715),
+		CategoryLight: normalfn(lightMul, 715),
+		CategoryHeavy: normalfn(heavyMul, 715),
 	},
 }
 
@@ -162,10 +130,9 @@ type ConvertYuanArgs struct {
 	X         uint64
 	Rate      float64
 	OrderType OrderType
-	Location  Location
 	Category  Category
 }
 
 func ConvertYuan(args ConvertYuanArgs) (rub uint64) {
-	return formulas[args.OrderType][args.Location][args.Category](args.X, args.Rate)
+	return formulas[args.OrderType][args.Category](args.X, args.Rate)
 }
